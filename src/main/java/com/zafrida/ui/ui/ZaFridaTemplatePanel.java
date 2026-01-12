@@ -65,7 +65,7 @@ public final class ZaFridaTemplatePanel extends JPanel implements Disposable {
 
         scriptField.setEditable(false);
         scriptField.setColumns(22);
-        chooseScriptBtn.setIcon(AllIcons.Actions.Open);
+        chooseScriptBtn.setIcon(AllIcons.Actions.MenuOpen);
         createScriptBtn.setIcon(AllIcons.Actions.NewFolder);
         installTypingsBtn.setIcon(AllIcons.Actions.Download);
         refreshBtn.setIcon(AllIcons.Actions.Refresh);
@@ -231,7 +231,7 @@ public final class ZaFridaTemplatePanel extends JPanel implements Disposable {
         }
 
         String[] options = categories.stream().map(Enum::name).toArray(String[]::new);
-        String chosen = Messages.showChooseDialog(project, "Select template category", "Add Template", options, options[0], null);
+        String chosen = chooseOption("Select template category", "Add Template", options);
         if (chosen == null) return;
 
         ZaFridaTemplateCategory category = ZaFridaTemplateCategory.valueOf(chosen);
@@ -259,7 +259,7 @@ public final class ZaFridaTemplatePanel extends JPanel implements Disposable {
         }
 
         String[] options = list.stream().map(ZaFridaTemplate::getTitle).toArray(String[]::new);
-        String chosen = Messages.showChooseDialog(project, "Select template to remove", "Remove Template", options, options[0], null);
+        String chosen = chooseOption("Select template to remove", "Remove Template", options);
         if (chosen == null) return;
 
         ZaFridaTemplate target = list.stream()
@@ -282,6 +282,14 @@ public final class ZaFridaTemplatePanel extends JPanel implements Disposable {
 
         buildTemplatesUI();
         updateCheckboxState();
+    }
+
+    @Nullable
+    private String chooseOption(@NotNull String message, @NotNull String title, @NotNull String[] options) {
+        if (options.length == 0) return null;
+        // Messages.showChooseDialog takes Icon before String[] and returns the selected index.
+        int index = Messages.showChooseDialog(project, message, title, null, options, options[0]);
+        return index < 0 ? null : options[index];
     }
 
     private @NotNull List<ZaFridaTemplateCategory> allowedCategories() {

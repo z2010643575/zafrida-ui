@@ -144,10 +144,10 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
 
         refreshDevicesBtn.setIcon(AllIcons.Actions.Refresh);
         addRemoteBtn.setIcon(AllIcons.General.Add);
-        chooseScriptBtn.setIcon(AllIcons.Actions.Open);
+        chooseScriptBtn.setIcon(AllIcons.Actions.MenuOpen);
         runBtn.setIcon(AllIcons.Actions.Execute);
         stopBtn.setIcon(AllIcons.Actions.Suspend);
-        clearConsoleBtn.setIcon(AllIcons.Actions.Clean);
+        clearConsoleBtn.setIcon(AllIcons.Actions.ClearCash);
         newFridaProjectBtn.setIcon(AllIcons.Actions.NewFolder);
         projectSettingsBtn.setIcon(AllIcons.General.Settings);
     }
