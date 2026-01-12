@@ -31,7 +31,16 @@ public final class FridaOutputParsers {
         for (String line : dataLines) {
             String[] parts = splitBy2PlusSpaces(line, 3);
             if (parts.length >= 3) {
-                out.add(new FridaDevice(parts[0].trim(), parts[1].trim(), parts[2].trim()));
+                String id = parts[0].trim();
+                String type = parts[1].trim();
+                String name = parts[2].trim();
+
+                // skip header/separator junk
+                if (id.isEmpty() || type.isEmpty()) continue;
+                if (id.equalsIgnoreCase("Id") && type.equalsIgnoreCase("Type")) continue;
+                if (isDashOnlyToken(id) || isDashOnlyToken(type)) continue;
+
+                out.add(new FridaDevice(id, type, name));
             }
         }
         return out;
@@ -57,9 +66,16 @@ public final class FridaOutputParsers {
         for (String line : dataLines) {
             String[] parts = splitBy2PlusSpaces(line, 3);
             if (parts.length >= 2) {
-                Integer pid = tryParseInt(parts[0].trim());
+                String pidStr = parts[0].trim();
+                if (pidStr.equalsIgnoreCase("PID") || isDashOnlyToken(pidStr)) continue;
+
+                Integer pid = tryParseInt(pidStr);
                 String name = parts[1].trim();
                 String identifier = parts.length >= 3 ? emptyToNull(parts[2].trim()) : null;
+
+                // name 也可能是 "Name" 之类的表头残留，顺手过滤
+                if (name.equalsIgnoreCase("Name") && pid == null) continue;
+
                 out.add(new FridaProcess(pid, name, identifier));
             }
         }
@@ -94,18 +110,57 @@ public final class FridaOutputParsers {
                 idx++;
                 continue;
             }
-            boolean allDash = true;
-            for (int i = 0; i < t.length(); i++) {
-                if (t.charAt(i) != '-') {
-                    allDash = false;
-                    break;
-                }
+            if (isSeparatorLine(t)) {
+                idx++;
+                continue;
             }
-            if (allDash) idx++;
-            else break;
+            break;
         }
         return lines.subList(idx, lines.size());
     }
+
+    private static boolean isSeparatorLine(@NotNull String t) {
+        // Accept things like:
+        // "---- ---- ----"
+        // "──────────────"
+        // "| ---- | ---- |"
+        boolean hasDash = false;
+        for (int i = 0; i < t.length(); i++) {
+            char ch = t.charAt(i);
+
+            // common dash-like chars
+            if (ch == '-' || ch == '─' || ch == '━' || ch == '—') {
+                hasDash = true;
+                continue;
+            }
+
+            // allow whitespace and some table border chars
+            if (Character.isWhitespace(ch) || ch == '|' || ch == '+' ) {
+                continue;
+            }
+
+            // any other char => not a separator line
+            return false;
+        }
+        return hasDash;
+    }
+
+    private static boolean isDashOnlyToken(@NotNull String token) {
+        String t = token.trim();
+        if (t.isEmpty()) return true;
+
+        boolean hasDash = false;
+        for (int i = 0; i < t.length(); i++) {
+            char ch = t.charAt(i);
+            if (ch == '-' || ch == '─' || ch == '━' || ch == '—') {
+                hasDash = true;
+                continue;
+            }
+            return false;
+        }
+        return hasDash;
+    }
+
 
     private static @NotNull String[] splitBy2PlusSpaces(@NotNull String line, int limit) {
         // Replace 2+ spaces with a single delimiter, then split.
