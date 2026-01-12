@@ -1,0 +1,43 @@
+<idea-plugin>
+    <id>com.zafrida.ui</id>
+    <name>ZAFrida UI</name>
+    <vendor email="dev@zafrida.local" url="https://github.com/yourname/zafrida-ui">ZAFrida</vendor>
+
+    <description><![CDATA[
+    <p><b>ZAFrida UI</b> is a Frida UI tool window for PyCharm / JetBrains IDEs.</p>
+    <ul>
+      <li>List devices via <code>frida-ls-devices</code></li>
+      <li>List targets via <code>frida-ps</code></li>
+      <li>Run/Stop <code>frida</code> with your existing frida tools</li>
+      <li>JS templates managed by checkboxes (disable by comments, never delete)</li>
+      <li>Console output + persistent .log file in project</li>
+    </ul>
+    ]]></description>
+
+    <!-- Target PyCharm / Python IDEs -->
+    <depends>com.intellij.modules.platform</depends>
+    <depends>com.intellij.modules.python</depends>
+
+    <!-- Extension points defined by the plugin -->
+    <extensions defaultExtensionNs="com.intellij">
+
+        <toolWindow
+                id="ZAFrida"
+                anchor="bottom"
+                factoryClass="com.zafrida.ui.toolwindow.ZaFridaToolWindowFactory"
+                icon="META-INF/pluginIcon.svg"/>
+
+        <notificationGroup id="ZAFrida" displayType="BALLOON" isLogByDefault="true"/>
+
+        <applicationService serviceImplementation="com.zafrida.ui.settings.ZaFridaSettingsService"/>
+        <applicationService serviceImplementation="com.zafrida.ui.frida.FridaCliService"/>
+        <applicationService serviceImplementation="com.zafrida.ui.templates.ZaFridaTemplateService"/>
+
+        <projectService serviceImplementation="com.zafrida.ui.session.ZaFridaSessionService"/>
+
+        <applicationConfigurable
+                id="com.zafrida.ui.settings"
+                displayName="ZAFrida"
+                instance="com.zafrida.ui.settings.ZaFridaSettingsConfigurable"/>
+    </extensions>
+</idea-plugin>
