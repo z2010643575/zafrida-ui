@@ -32,6 +32,7 @@ import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
 import java.util.List;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 import com.intellij.ui.components.JBTextField;
 
@@ -41,6 +42,9 @@ public final class ZaFridaProjectSettingsDialog extends DialogWrapper {
     private final ZaFridaProjectManager projectManager;
     private final FridaCliService fridaCliService;
     private final Supplier<FridaDevice> deviceSupplier;
+    private final @Nullable Consumer<String> errorLogger;
+
+    private final ButtonGroup targetGroup = new ButtonGroup();
 
     private final ComboBox<FridaConnectionMode> connectionModeCombo = new ComboBox<>(FridaConnectionMode.values());
     private final JBTextField remoteHostField = new JBTextField();
@@ -59,19 +63,20 @@ public final class ZaFridaProjectSettingsDialog extends DialogWrapper {
     public ZaFridaProjectSettingsDialog(@NotNull Project project,
                                         @NotNull ZaFridaProjectManager projectManager,
                                         @NotNull FridaCliService fridaCliService,
-                                        @NotNull Supplier<FridaDevice> deviceSupplier) {
+                                        @NotNull Supplier<FridaDevice> deviceSupplier,
+                                        @Nullable Consumer<String> errorLogger) {
         super(project, true);
         this.project = project;
         this.projectManager = projectManager;
         this.fridaCliService = fridaCliService;
         this.deviceSupplier = deviceSupplier;
+        this.errorLogger = errorLogger;
         refreshTargetsBtn.setIcon(AllIcons.Actions.Refresh);
         setTitle("ZAFrida Project Settings");
         setOKButtonText("Save");
-        init();
-        ButtonGroup targetGroup = new ButtonGroup();
         targetGroup.add(manualTargetRadio);
         targetGroup.add(selectTargetRadio);
+        init();
         manualTargetRadio.setSelected(true);
         loadFromProject();
         bindActions();
@@ -228,10 +233,11 @@ public final class ZaFridaProjectSettingsDialog extends DialogWrapper {
     }
 
     private void refreshTargets() {
-        if (manualTargetRadio.isSelected()) return;
+        if (!selectTargetRadio.isSelected()) return;
         FridaDevice device = resolveDeviceForTargets();
         if (device == null) {
             Messages.showWarningDialog(project, "Select a device first in the Run panel.", "ZAFrida");
+            logError("[ZAFrida] Select a device first in the Run panel.");
             return;
         }
         FridaProcessScope scope = (FridaProcessScope) scopeCombo.getSelectedItem();
@@ -255,6 +261,7 @@ public final class ZaFridaProjectSettingsDialog extends DialogWrapper {
             } catch (Throwable t) {
                 ApplicationManager.getApplication().invokeLater(() -> {
                     refreshTargetsBtn.setEnabled(true);
+                    logError("[ZAFrida] Load targets failed: " + t.getMessage());
                     Messages.showWarningDialog(project, "Load targets failed: " + t.getMessage(), "ZAFrida");
                 });
             }
@@ -301,7 +308,7 @@ public final class ZaFridaProjectSettingsDialog extends DialogWrapper {
     }
 
     private void updateTargetModeUi() {
-        boolean manual = manualTargetRadio.isSelected();
+        boolean manual = !selectTargetRadio.isSelected();
         manualTargetField.setEnabled(manual);
         targetCombo.setEnabled(!manual);
         refreshTargetsBtn.setEnabled(!manual);
@@ -393,5 +400,11 @@ public final class ZaFridaProjectSettingsDialog extends DialogWrapper {
             return p.getName();
         }
         return null;
+    }
+
+    private void logError(@NotNull String message) {
+        if (errorLogger != null) {
+            errorLogger.accept(message);
+        }
     }
 }

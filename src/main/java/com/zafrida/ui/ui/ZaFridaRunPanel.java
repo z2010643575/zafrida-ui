@@ -5,11 +5,15 @@ import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.fileChooser.FileChooser;
 import com.intellij.openapi.fileChooser.FileChooserDescriptor;
 import com.intellij.openapi.project.Project;
+import com.intellij.execution.configurations.GeneralCommandLine;
+import com.intellij.execution.process.CapturingProcessHandler;
+import com.intellij.execution.process.ProcessOutput;
+import com.intellij.icons.AllIcons;
+import com.intellij.openapi.options.ShowSettingsUtil;
 import com.intellij.openapi.ui.ComboBox;
 import com.intellij.openapi.ui.Messages;
-import com.intellij.openapi.util.IconLoader;
-import com.intellij.icons.AllIcons;
 import com.intellij.openapi.vfs.VirtualFile;
+import com.intellij.util.SlowOperations;
 import com.intellij.ui.components.JBTextField;
 import com.zafrida.ui.frida.*;
 import com.zafrida.ui.fridaproject.*;
@@ -67,6 +71,7 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
 
     private final JButton runBtn = new JButton("Run");
     private final JButton stopBtn = new JButton("Stop");
+    private final JButton forceStopBtn = new JButton("Force Stop App");
     private final JButton clearConsoleBtn = new JButton("Clear Console");
 
     private final JLabel logFileLabel = new JLabel("Log: (not started)");
@@ -78,12 +83,10 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
     private final ZaFridaProjectManager fridaProjectManager;
     private final SearchableComboBoxPanel<ZaFridaFridaProject> fridaProjectSelector =
             new SearchableComboBoxPanel<>(p -> p == null ? "" : p.getName());
-    private final JButton newFridaProjectBtn = new JButton("New Project");
-    private final JButton projectSettingsBtn = new JButton("Settings");
-    private final JButton languageToggleBtn =
-            new JButton(IconLoader.getIcon("/META-INF/icons/lang-toggle.svg", ZaFridaRunPanel.class));
     private boolean updatingFridaProjectSelector = false;
     private boolean updatingDeviceCombo = false;
+    private @Nullable JButton externalRunBtn;
+    private @Nullable JButton externalStopBtn;
 
 
     public ZaFridaRunPanel(@NotNull Project project,
@@ -113,10 +116,7 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
         row = addRow(form, row, new JLabel("Extra"), buildExtraRow());
         row = addRow(form, row, new JLabel(""), buildButtonsRow());
 
-        JPanel top = new JPanel(new BorderLayout());
-        top.add(buildTopActionRow(), BorderLayout.NORTH);
-        top.add(form, BorderLayout.CENTER);
-        add(top, BorderLayout.NORTH);
+        add(form, BorderLayout.NORTH);
         add(logFileLabel, BorderLayout.SOUTH);
 
         initUiState();
@@ -129,7 +129,6 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
     private void initUiState() {
         deviceCombo.setRenderer(new DeviceCellRenderer());
         scriptField.setEditable(false);
-        stopBtn.setEnabled(false);
         extraArgsField.setToolTipText("Extra args passed to frida, e.g. --realm=emulated");
 
         ButtonGroup group = new ButtonGroup();
@@ -138,29 +137,20 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
 
         targetField.setColumns(18);
         extraArgsField.setColumns(18);
-        languageToggleBtn.setToolTipText("中文 / English");
 
         refreshDevicesBtn.setIcon(AllIcons.Actions.Refresh);
         addRemoteBtn.setIcon(AllIcons.General.Add);
         chooseScriptBtn.setIcon(AllIcons.Actions.MenuOpen);
         runBtn.setIcon(AllIcons.Actions.Execute);
         stopBtn.setIcon(AllIcons.Actions.Suspend);
+        forceStopBtn.setIcon(AllIcons.Actions.Cancel);
         clearConsoleBtn.setIcon(AllIcons.Actions.ClearCash);
-        newFridaProjectBtn.setIcon(AllIcons.Actions.NewFolder);
-        projectSettingsBtn.setIcon(AllIcons.General.Settings);
+        setRunningState(false);
     }
 
     private JPanel buildFridaProjectRow() {
         JPanel row = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
         row.add(fridaProjectSelector);
-        return row;
-    }
-
-    private JPanel buildTopActionRow() {
-        JPanel row = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 6));
-        row.add(newFridaProjectBtn);
-        row.add(projectSettingsBtn);
-        row.add(languageToggleBtn);
         return row;
     }
 
@@ -187,6 +177,7 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
 
         runBtn.addActionListener(e -> runFrida());
         stopBtn.addActionListener(e -> stopFrida());
+        forceStopBtn.addActionListener(e -> forceStopApp());
 
         deviceCombo.addActionListener(e -> {
             if (updatingDeviceCombo) return;
@@ -209,13 +200,6 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
             if (updatingFridaProjectSelector) return;
             fridaProjectManager.setActiveProject(fridaProjectSelector.getSelectedItem());
         });
-        newFridaProjectBtn.addActionListener(e -> createNewFridaProject());
-        projectSettingsBtn.addActionListener(e -> openProjectSettings());
-        languageToggleBtn.addActionListener(e -> Messages.showInfoMessage(
-                project,
-                "Switch UI language (中文/English) is coming soon.",
-                "ZAFrida"
-        ));
         chooseScriptBtn.addActionListener(e -> {
             ZaFridaFridaProject active = fridaProjectManager.getActiveProject();
             VirtualFile initial = active != null ? fridaProjectManager.resolveProjectDir(active) : null;
@@ -262,7 +246,6 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
             // 没有项目时，禁用一些按钮（可选）
             boolean has = !list.isEmpty();
             fridaProjectSelector.setEnabled(true);
-            newFridaProjectBtn.setEnabled(true);
 
             if (!has) {
                 // 这里不强制清空脚本/target，避免用户临时用“无项目模式”
@@ -347,11 +330,62 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
                 project,
                 fridaProjectManager,
                 fridaCli,
-                () -> (FridaDevice) deviceCombo.getSelectedItem()
+                () -> (FridaDevice) deviceCombo.getSelectedItem(),
+                consolePanel::error
         );
         if (dialog.showAndGet()) {
             applyActiveFridaProjectToUi(fridaProjectManager.getActiveProject());
         }
+    }
+
+    private void openGlobalSettings() {
+        SlowOperations.allowSlowOperations(() ->
+                ShowSettingsUtil.getInstance().showSettingsDialog(project, "ZAFrida")
+        );
+    }
+
+    public void openNewProjectDialog() {
+        createNewFridaProject();
+    }
+
+    public void openProjectSettingsDialog() {
+        openProjectSettings();
+    }
+
+    public void openGlobalSettingsDialog() {
+        openGlobalSettings();
+    }
+
+    public void showLanguageToggleMessage() {
+        Messages.showInfoMessage(
+                project,
+                "Switch UI language (中文/English) is coming soon.",
+                "ZAFrida"
+        );
+    }
+
+    public void triggerRun() {
+        if (!runBtn.isEnabled()) return;
+        runFrida();
+    }
+
+    public void triggerStop() {
+        if (!stopBtn.isEnabled()) return;
+        stopFrida();
+    }
+
+    public void triggerForceStop() {
+        forceStopApp();
+    }
+
+    public void triggerClearConsole() {
+        consolePanel.clear();
+    }
+
+    public void bindExternalRunStopButtons(@NotNull JButton runButton, @NotNull JButton stopButton) {
+        this.externalRunBtn = runButton;
+        this.externalStopBtn = stopButton;
+        syncExternalRunStopButtons();
     }
 
 
@@ -397,6 +431,7 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
         JPanel p = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
         p.add(runBtn);
         p.add(stopBtn);
+        p.add(forceStopBtn);
         p.add(clearConsoleBtn);
         return p;
     }
@@ -705,12 +740,10 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
             );
 
             session.getProcessHandler().addProcessListener(sessionService.createUiStateListener(() -> {
-                runBtn.setEnabled(true);
-                stopBtn.setEnabled(false);
+                setRunningState(false);
             }));
 
-            runBtn.setEnabled(false);
-            stopBtn.setEnabled(true);
+            setRunningState(true);
             logFileLabel.setText("Log: " + session.getLogFilePath());
             consolePanel.info("[ZAFrida] Log file: " + session.getLogFilePath());
         } catch (Throwable t) {
@@ -722,9 +755,103 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
 
     private void stopFrida() {
         sessionService.stop();
-        runBtn.setEnabled(true);
-        stopBtn.setEnabled(false);
+        setRunningState(false);
         consolePanel.info("[ZAFrida] Stopped");
+    }
+
+    private void forceStopApp() {
+        ZaFridaFridaProject active = fridaProjectManager.getActiveProject();
+        ZaFridaProjectConfig projectConfig = active != null ? fridaProjectManager.loadProjectConfig(active) : null;
+        String packageName = resolveForceStopPackage(projectConfig);
+        if (StringUtil.isEmptyOrSpaces(packageName)) {
+            ZaFridaNotifier.warn(project, "ZAFrida", "Force stop requires a package name");
+            consolePanel.warn("[ZAFrida] Force stop requires a package name.");
+            return;
+        }
+
+        FridaDevice selected = (FridaDevice) deviceCombo.getSelectedItem();
+        String deviceId = null;
+        if (selected != null && selected.getMode() == FridaDeviceMode.DEVICE_ID) {
+            String id = selected.getId();
+            if (!StringUtil.isEmptyOrSpaces(id) && !"usb".equalsIgnoreCase(id)) {
+                deviceId = id;
+            }
+        }
+
+        List<String> args = new ArrayList<>();
+        args.add("adb");
+        if (deviceId != null) {
+            args.add("-s");
+            args.add(deviceId);
+        }
+        args.add("shell");
+        args.add("am");
+        args.add("force-stop");
+        args.add(packageName);
+
+        GeneralCommandLine cmd = new GeneralCommandLine(args);
+        consolePanel.info("[ZAFrida] Force stop command: " + cmd.getCommandLineString());
+
+        ApplicationManager.getApplication().executeOnPooledThread(() -> {
+            try {
+                CapturingProcessHandler handler = new CapturingProcessHandler(cmd);
+                ProcessOutput out = handler.runProcess(10_000);
+                String stdout = out.getStdout() != null ? out.getStdout().trim() : "";
+                String stderr = out.getStderr() != null ? out.getStderr().trim() : "";
+                int exitCode = out.getExitCode();
+                ApplicationManager.getApplication().invokeLater(() -> {
+                    if (exitCode == 0) {
+                        consolePanel.info("[ZAFrida] Force stopped: " + packageName);
+                        if (!stdout.isBlank()) {
+                            consolePanel.info(stdout);
+                        }
+                    } else {
+                        String detail = !stderr.isBlank() ? stderr : stdout;
+                        if (detail.isBlank()) detail = "unknown error";
+                        consolePanel.error("[ZAFrida] Force stop failed (exit=" + exitCode + "): " + detail);
+                    }
+                });
+            } catch (Throwable t) {
+                ApplicationManager.getApplication().invokeLater(() ->
+                        consolePanel.error("[ZAFrida] Force stop failed: " + t.getMessage())
+                );
+            }
+        });
+    }
+
+    private @Nullable String resolveForceStopPackage(@Nullable ZaFridaProjectConfig cfg) {
+        boolean gadgetMode = cfg != null && cfg.connectionMode == FridaConnectionMode.GADGET;
+        String target = gadgetMode ? "" : (targetField.getText() != null ? targetField.getText().trim() : "");
+        if (!target.isEmpty()) {
+            if (spawnRadio.isSelected()) return target;
+            if (!isNumeric(target)) return target;
+        }
+        if (cfg != null && !StringUtil.isEmptyOrSpaces(cfg.lastTarget)) {
+            return cfg.lastTarget.trim();
+        }
+        return null;
+    }
+
+    private static boolean isNumeric(@NotNull String value) {
+        for (int i = 0; i < value.length(); i++) {
+            if (!Character.isDigit(value.charAt(i))) return false;
+        }
+        return !value.isEmpty();
+    }
+
+    private void setRunningState(boolean running) {
+        runBtn.setEnabled(!running);
+        stopBtn.setEnabled(running);
+        syncExternalRunStopButtons();
+    }
+
+    private void syncExternalRunStopButtons() {
+        if (externalRunBtn != null) {
+            externalRunBtn.setEnabled(runBtn.isEnabled());
+        }
+        if (externalStopBtn != null) {
+            externalStopBtn.setEnabled(stopBtn.isEnabled());
+        }
     }
 
     private void disableControls(boolean disabled) {
