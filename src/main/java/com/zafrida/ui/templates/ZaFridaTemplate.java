@@ -4,36 +4,29 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.nio.file.Path;
+import java.util.Objects;
 
-public final class ZaFridaTemplate {
+public class ZaFridaTemplate {
 
     private final @NotNull String id;
     private final @NotNull String title;
-    private final @NotNull String description;
-    private final @NotNull ZaFridaTemplateCategory category;
+    private final @Nullable String description;
     private final @NotNull String content;
-    private final @Nullable Path sourcePath;
+    private final @NotNull ZaFridaTemplateCategory category;
+    private final @Nullable Path filePath;
 
     public ZaFridaTemplate(@NotNull String id,
                            @NotNull String title,
-                           @NotNull String description,
-                           @NotNull ZaFridaTemplateCategory category,
-                           @NotNull String content) {
-        this(id, title, description, category, content, null);
-    }
-
-    public ZaFridaTemplate(@NotNull String id,
-                           @NotNull String title,
-                           @NotNull String description,
-                           @NotNull ZaFridaTemplateCategory category,
+                           @Nullable String description,
                            @NotNull String content,
-                           @Nullable Path sourcePath) {
+                           @NotNull ZaFridaTemplateCategory category,
+                           @Nullable Path filePath) {
         this.id = id;
         this.title = title;
         this.description = description;
-        this.category = category;
         this.content = content;
-        this.sourcePath = sourcePath;
+        this.category = category;
+        this.filePath = filePath;
     }
 
     public @NotNull String getId() {
@@ -44,19 +37,45 @@ public final class ZaFridaTemplate {
         return title;
     }
 
-    public @NotNull String getDescription() {
+    public @Nullable String getDescription() {
         return description;
-    }
-
-    public @NotNull ZaFridaTemplateCategory getCategory() {
-        return category;
     }
 
     public @NotNull String getContent() {
         return content;
     }
 
-    public @Nullable Path getSourcePath() {
-        return sourcePath;
+    public @NotNull ZaFridaTemplateCategory getCategory() {
+        return category;
+    }
+
+    public @Nullable Path getFilePath() {
+        return filePath;
+    }
+
+    public boolean isCustom() {
+        return category == ZaFridaTemplateCategory.CUSTOM;
+    }
+
+    public boolean isEditable() {
+        return filePath != null;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        ZaFridaTemplate that = (ZaFridaTemplate) o;
+        return Objects.equals(id, that.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(id);
+    }
+
+    @Override
+    public String toString() {
+        return title;
     }
 }
