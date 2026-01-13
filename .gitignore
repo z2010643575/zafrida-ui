@@ -45,3 +45,4 @@ bin/
 *.iml
 rebel.xml
 /.intellijPlatform/
+**/repomix-output*.xml
