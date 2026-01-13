@@ -18,10 +18,12 @@ import com.intellij.openapi.ui.Messages;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.ui.CheckBoxList;
 import com.intellij.ui.JBColor;
+import com.intellij.ui.components.JBTextField;
 import com.intellij.ui.OnePixelSplitter;
 import com.intellij.ui.components.JBLabel;
 import com.intellij.ui.components.JBList;
 import com.intellij.ui.components.JBScrollPane;
+import com.intellij.ui.DocumentAdapter;
 import com.intellij.util.ui.JBUI;
 import com.intellij.util.ui.UIUtil;
 import com.zafrida.ui.fridaproject.ZaFridaPlatform;
@@ -32,6 +34,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import javax.swing.*;
+import javax.swing.event.DocumentEvent;
 import javax.swing.event.ListSelectionEvent;
 import java.awt.*;
 import java.util.List;
@@ -58,6 +61,7 @@ public final class ZaFridaTemplatePanel extends JPanel implements Disposable {
     private final DefaultListModel<String> categoryModel;
 
     private final CheckBoxList<ZaFridaTemplate> templateCheckBoxList;
+    private final JBTextField templateFilterField = new JBTextField();
 
     private final JPanel previewPanel;
     private final JBLabel templateTitleLabel;
@@ -400,6 +404,19 @@ public final class ZaFridaTemplatePanel extends JPanel implements Disposable {
         toolbar.add(deleteBtn);
         toolbar.add(Box.createHorizontalStrut(JBUI.scale(4)));
         toolbar.add(favoriteBtn);
+        toolbar.add(Box.createHorizontalStrut(JBUI.scale(6)));
+
+        toolbar.add(new JBLabel("Filter:"));
+        templateFilterField.setToolTipText("Filter by template title or description");
+        templateFilterField.setPreferredSize(new Dimension(JBUI.scale(160), templateFilterField.getPreferredSize().height));
+        templateFilterField.getDocument().addDocumentListener(new DocumentAdapter() {
+            @Override
+            protected void textChanged(@NotNull DocumentEvent e) {
+                refreshTemplateList();
+                syncCheckboxStatesWithScript();
+            }
+        });
+        toolbar.add(templateFilterField);
 
         return toolbar;
     }
@@ -500,6 +517,14 @@ public final class ZaFridaTemplatePanel extends JPanel implements Disposable {
                     filtered = all;
             }
 
+            String filterText = templateFilterField.getText().trim();
+            if (!filterText.isEmpty()) {
+                String needle = filterText.toLowerCase(Locale.ROOT);
+                filtered = filtered.stream()
+                        .filter(template -> matchesFilter(template, needle))
+                        .collect(Collectors.toList());
+            }
+
             // Sort: favorites first, then alphabetically
             filtered.sort((a, b) -> {
                 boolean aFav = favoriteTemplateIds.contains(a.getId());
@@ -520,6 +545,15 @@ public final class ZaFridaTemplatePanel extends JPanel implements Disposable {
         } finally {
             isUpdatingCheckboxes = false;
         }
+    }
+
+    private boolean matchesFilter(@NotNull ZaFridaTemplate template, @NotNull String needle) {
+        String title = template.getTitle();
+        if (title != null && title.toLowerCase(Locale.ROOT).contains(needle)) {
+            return true;
+        }
+        String desc = template.getDescription();
+        return desc != null && desc.toLowerCase(Locale.ROOT).contains(needle);
     }
 
     private void updatePreview(@Nullable ZaFridaTemplate template) {
