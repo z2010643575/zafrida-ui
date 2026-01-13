@@ -733,12 +733,29 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
                 extraArgsField.getText() != null ? extraArgsField.getText() : ""
         );
 
+        // 确定 Frida 项目目录
+        String fridaProjectDir = null;
+        if (active != null) {
+            VirtualFile dir = fridaProjectManager.resolveProjectDir(active);
+            if (dir != null) {
+                fridaProjectDir = dir.getPath();
+            }
+        }
+
+// 确定包名（spawn 模式下的 target）
+        String targetPackage = null;
+        if (!gadgetMode && spawnRadio.isSelected() && !target.isEmpty()) {
+            targetPackage = target;
+        }
+
         try {
             RunningSession session = sessionService.start(
                     cfg,
                     consolePanel.getConsoleView(),
                     consolePanel::info,
-                    consolePanel::error
+                    consolePanel::error,
+                    fridaProjectDir,
+                    targetPackage
             );
 
             session.getProcessHandler().addProcessListener(sessionService.createUiStateListener(() -> {

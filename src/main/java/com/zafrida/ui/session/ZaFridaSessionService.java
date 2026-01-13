@@ -34,11 +34,13 @@ public final class ZaFridaSessionService implements Disposable {
     public synchronized @NotNull RunningSession start(@NotNull FridaRunConfig config,
                                                       @NotNull ConsoleView consoleView,
                                                       @NotNull Consumer<String> info,
-                                                      @NotNull Consumer<String> error) throws Exception {
+                                                      @NotNull Consumer<String> error,
+                                                      @Nullable String fridaProjectDir,
+                                                      @Nullable String targetPackage) throws Exception {
         stop();
 
         String basePath = project.getBasePath();
-        Path logFile = basePath != null ? ZaFridaLogPaths.newSessionLogFile(basePath) : null;
+        Path logFile = basePath != null ? ZaFridaLogPaths.newSessionLogFile(basePath, fridaProjectDir, targetPackage) : null;
         String logPathStr = logFile != null ? logFile.toAbsolutePath().toString() : "(log disabled: project basePath is null)";
 
         SessionLogWriter writer = null;
