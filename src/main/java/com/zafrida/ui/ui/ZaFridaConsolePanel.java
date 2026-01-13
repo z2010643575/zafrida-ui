@@ -4,6 +4,7 @@ import com.intellij.execution.impl.ConsoleViewImpl;
 import com.intellij.execution.ui.ConsoleView;
 import com.intellij.execution.ui.ConsoleViewContentType;
 import com.intellij.execution.filters.TextConsoleBuilderFactory;
+import com.intellij.icons.AllIcons;
 import com.intellij.openapi.Disposable;
 import com.intellij.openapi.util.Disposer;
 import com.intellij.openapi.project.Project;
@@ -56,12 +57,14 @@ public final class ZaFridaConsolePanel extends JPanel implements Disposable {
 
     private JPanel buildSearchPanel() {
         JPanel panel = new JPanel(new BorderLayout(8, 0));
-        searchField.addActionListener(event -> findNext(true));
+        searchField.getTextEditor().addActionListener(event -> findNext(true));
         panel.add(searchField, BorderLayout.CENTER);
 
         JPanel actionsPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 4, 0));
-        JButton prevButton = new JButton("Prev");
-        JButton nextButton = new JButton("Next");
+        JButton prevButton = new JButton(AllIcons.Actions.PreviousOccurence);
+        JButton nextButton = new JButton(AllIcons.Actions.NextOccurence);
+        prevButton.setToolTipText("Previous Occurrence");
+        nextButton.setToolTipText("Next Occurrence");
         prevButton.addActionListener(event -> findNext(false));
         nextButton.addActionListener(event -> findNext(true));
         actionsPanel.add(prevButton);
