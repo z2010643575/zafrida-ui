@@ -11,6 +11,7 @@ import org.jetbrains.annotations.NotNull;
 import javax.swing.DefaultListModel;
 import javax.swing.JButton;
 import javax.swing.JComponent;
+import javax.swing.JLabel;
 import javax.swing.JPanel;
 import java.awt.BorderLayout;
 import java.awt.FlowLayout;
@@ -23,6 +24,8 @@ public final class ZaFridaSettingsComponent {
     private final JBTextField fridaPsField = new JBTextField();
     private final JBTextField fridaLsDevicesField = new JBTextField();
     private final JBTextField logsDirField = new JBTextField();
+    private final JBTextField defaultRemoteHostField = new JBTextField();
+    private final JBTextField defaultRemotePortField = new JBTextField();
 
     private final DefaultListModel<String> remoteModel = new DefaultListModel<>();
     private final JBList<String> remoteList = new JBList<>(remoteModel);
@@ -43,16 +46,29 @@ public final class ZaFridaSettingsComponent {
         remotePanel.add(new JBScrollPane(remoteList), BorderLayout.CENTER);
         remotePanel.add(remoteButtons, BorderLayout.SOUTH);
 
+        defaultRemoteHostField.setColumns(16);
+        defaultRemotePortField.setColumns(6);
+        defaultRemoteHostField.getEmptyText().setText("127.0.0.1");
+        defaultRemotePortField.getEmptyText().setText("14725");
+        JPanel defaultRemotePanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
+        defaultRemotePanel.add(defaultRemoteHostField);
+        defaultRemotePanel.add(new JLabel(":"));
+        defaultRemotePanel.add(defaultRemotePortField);
+
         panel = FormBuilder.createFormBuilder()
                 .addLabeledComponent("frida", fridaField, 1, false)
                 .addLabeledComponent("frida-ps", fridaPsField, 1, false)
                 .addLabeledComponent("frida-ls-devices", fridaLsDevicesField, 1, false)
                 .addLabeledComponent("Logs Dir (relative to project)", logsDirField, 1, false)
+                .addLabeledComponent("Default Remote Host:Port", defaultRemotePanel, 1, false)
                 .addLabeledComponent("Remote Hosts (host:port)", remotePanel, 1, false)
                 .getPanel();
 
         addRemoteBtn.addActionListener(e -> {
-            String input = Messages.showInputDialog(panel, "host:port", "ZAFrida", null);
+            String defHost = textOrDefault(defaultRemoteHostField.getText(), "127.0.0.1");
+            String defPort = textOrDefault(defaultRemotePortField.getText(), "14725");
+            String initial = defHost + ":" + defPort;
+            String input = Messages.showInputDialog(panel, "host:port", "ZAFrida", null, initial, null);
             if (input == null) return;
             String h = input.trim();
             if (!h.isEmpty() && !containsRemote(h)) {
@@ -75,6 +91,8 @@ public final class ZaFridaSettingsComponent {
         fridaPsField.setText(orDefault(state.fridaPsExecutable, "frida-ps"));
         fridaLsDevicesField.setText(orDefault(state.fridaLsDevicesExecutable, "frida-ls-devices"));
         logsDirField.setText(orDefault(state.logsDirName, "zafrida-logs"));
+        defaultRemoteHostField.setText(orDefault(state.defaultRemoteHost, "127.0.0.1"));
+        defaultRemotePortField.setText(String.valueOf(state.defaultRemotePort > 0 ? state.defaultRemotePort : 14725));
 
         remoteModel.clear();
         if (state.remoteHosts != null) {
@@ -89,6 +107,8 @@ public final class ZaFridaSettingsComponent {
         state.fridaPsExecutable = textOrDefault(fridaPsField.getText(), "frida-ps");
         state.fridaLsDevicesExecutable = textOrDefault(fridaLsDevicesField.getText(), "frida-ls-devices");
         state.logsDirName = textOrDefault(logsDirField.getText(), "zafrida-logs");
+        state.defaultRemoteHost = textOrDefault(defaultRemoteHostField.getText(), "127.0.0.1");
+        state.defaultRemotePort = parsePort(defaultRemotePortField.getText(), 14725);
 
         List<String> remotes = new ArrayList<>();
         for (int i = 0; i < remoteModel.size(); i++) {
@@ -113,5 +133,15 @@ public final class ZaFridaSettingsComponent {
     private static String orDefault(String s, String d) {
         if (s == null || s.trim().isEmpty()) return d;
         return s;
+    }
+
+    private static int parsePort(String s, int fallback) {
+        if (s == null || s.trim().isEmpty()) return fallback;
+        try {
+            int v = Integer.parseInt(s.trim());
+            return v > 0 ? v : fallback;
+        } catch (NumberFormatException e) {
+            return fallback;
+        }
     }
 }

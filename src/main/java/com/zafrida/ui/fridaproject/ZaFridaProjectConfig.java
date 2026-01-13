@@ -1,5 +1,6 @@
 package com.zafrida.ui.fridaproject;
 
+import com.zafrida.ui.frida.FridaConnectionMode;
 import com.zafrida.ui.frida.FridaProcessScope;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -15,6 +16,15 @@ public final class ZaFridaProjectConfig {
 
     // 上次调试目标（Android package / iOS bundle）
     public @Nullable String lastTarget = null;
+
+    public @NotNull FridaConnectionMode connectionMode = FridaConnectionMode.USB;
+    public @NotNull String remoteHost = "127.0.0.1";
+    public int remotePort = 14725;
+
+    public @Nullable String lastDeviceId = null;
+    public @Nullable String lastDeviceHost = null;
+
+    public boolean targetManual = true;
 
     public @NotNull FridaProcessScope processScope = FridaProcessScope.RUNNING_APPS;
 }

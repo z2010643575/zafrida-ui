@@ -7,6 +7,7 @@ import com.intellij.openapi.vfs.VfsUtil;
 import com.intellij.openapi.vfs.VfsUtilCore;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.zafrida.ui.frida.FridaProcessScope;
+import com.zafrida.ui.frida.FridaConnectionMode;
 import com.intellij.util.messages.Topic;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -83,6 +84,10 @@ public final class ZaFridaProjectManager {
             cfg.platform = platform;
             cfg.mainScript = ZaFridaProjectFiles.DEFAULT_MAIN_SCRIPT;
             cfg.processScope = FridaProcessScope.RUNNING_APPS;
+            cfg.connectionMode = FridaConnectionMode.USB;
+            cfg.remoteHost = "127.0.0.1";
+            cfg.remotePort = 14725;
+            cfg.targetManual = true;
 
             // 这里不要再内部再套 WriteCommandAction（避免嵌套）
             storage.saveProjectConfigNoWriteAction(projectDir, cfg);

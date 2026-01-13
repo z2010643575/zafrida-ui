@@ -10,4 +10,6 @@ public final class ZaFridaSettingsState {
     public String fridaLsDevicesExecutable = "frida-ls-devices";
     public String logsDirName = "zafrida-logs";
     public List<String> remoteHosts = new ArrayList<>();
+    public String defaultRemoteHost = "127.0.0.1";
+    public int defaultRemotePort = 14725;
 }

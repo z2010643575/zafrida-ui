@@ -30,7 +30,6 @@ import org.jetbrains.annotations.Nullable;
 
 import javax.swing.ButtonGroup;
 import javax.swing.JButton;
-import javax.swing.JCheckBox;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JRadioButton;
@@ -64,7 +63,6 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
     private final JRadioButton attachRadio = new JRadioButton("Attach (-p)");
     private final JBTextField targetField = new JBTextField();
 
-    private final JCheckBox noPauseCheck = new JCheckBox("--no-pause", true);
     private final JBTextField extraArgsField = new JBTextField();
 
     private final JButton runBtn = new JButton("Run");
@@ -85,6 +83,7 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
     private final JButton languageToggleBtn =
             new JButton(IconLoader.getIcon("/META-INF/icons/lang-toggle.svg", ZaFridaRunPanel.class));
     private boolean updatingFridaProjectSelector = false;
+    private boolean updatingDeviceCombo = false;
 
 
     public ZaFridaRunPanel(@NotNull Project project,
@@ -125,7 +124,6 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
         subscribeToFridaProjectChanges();
         reloadFridaProjectsIntoUi();
         applyActiveFridaProjectToUi(fridaProjectManager.getActiveProject());
-        reloadDevicesAsync();
     }
 
     private void initUiState() {
@@ -170,7 +168,14 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
         refreshDevicesBtn.addActionListener(e -> reloadDevicesAsync());
 
         addRemoteBtn.addActionListener(e -> {
-            String host = Messages.showInputDialog(this, "host:port", "Add Frida Remote Host", null);
+            ZaFridaSettingsState st = ApplicationManager.getApplication()
+                    .getService(ZaFridaSettingsService.class)
+                    .getState();
+            String defHost = safeHost(st.defaultRemoteHost);
+            int defPort = safePort(st.defaultRemotePort);
+            String initial = defHost + ":" + defPort;
+
+            String host = Messages.showInputDialog(this, "host:port", "Add Frida Remote Host", null, initial, null);
             if (host == null) return;
             String h = host.trim();
             if (h.isEmpty()) return;
@@ -182,6 +187,23 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
 
         runBtn.addActionListener(e -> runFrida());
         stopBtn.addActionListener(e -> stopFrida());
+
+        deviceCombo.addActionListener(e -> {
+            if (updatingDeviceCombo) return;
+            FridaDevice selected = (FridaDevice) deviceCombo.getSelectedItem();
+            if (selected == null) return;
+            ZaFridaFridaProject active = fridaProjectManager.getActiveProject();
+            if (active == null) return;
+            fridaProjectManager.updateProjectConfig(active, cfg -> {
+                if (selected.getMode() == FridaDeviceMode.HOST) {
+                    cfg.lastDeviceHost = selected.getHost();
+                    cfg.lastDeviceId = null;
+                } else {
+                    cfg.lastDeviceId = selected.getId();
+                    cfg.lastDeviceHost = null;
+                }
+            });
+        });
 
         fridaProjectSelector.addActionListener(e -> {
             if (updatingFridaProjectSelector) return;
@@ -261,6 +283,11 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
 
         if (active == null) {
             // 不强制清空，让用户仍可用“自由脚本模式”
+            spawnRadio.setEnabled(true);
+            attachRadio.setEnabled(true);
+            targetField.setEnabled(true);
+            targetField.setToolTipText(null);
+            reloadDevicesAsync();
             return;
         }
 
@@ -270,6 +297,8 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
         if (!StringUtil.isEmptyOrSpaces(cfg.lastTarget)) {
             targetField.setText(cfg.lastTarget);
         }
+
+        applyConnectionUi(cfg);
 
         // 2) 恢复 mainScript（项目内相对路径）
         VirtualFile dir = fridaProjectManager.resolveProjectDir(active);
@@ -285,6 +314,8 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
                 }
             }
         }
+
+        reloadDevicesAsync();
     }
     private void createNewFridaProject() {
         CreateZaFridaProjectDialog dialog = new CreateZaFridaProjectDialog(project);
@@ -357,7 +388,6 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
 
     private JPanel buildExtraRow() {
         JPanel p = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
-        p.add(noPauseCheck);
         p.add(new JLabel("Args:"));
         p.add(extraArgsField);
         return p;
@@ -434,21 +464,41 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
         printToolchainInfoOnce();
         consolePanel.info("[ZAFrida] Loading devices...");
 
+        ZaFridaFridaProject active = fridaProjectManager.getActiveProject();
+        ZaFridaProjectConfig cfg = active != null ? fridaProjectManager.loadProjectConfig(active) : null;
+        FridaConnectionMode connectionMode =
+                cfg != null && cfg.connectionMode != null ? cfg.connectionMode : FridaConnectionMode.USB;
+
         ApplicationManager.getApplication().executeOnPooledThread(() -> {
             try {
                 List<FridaDevice> devices = new ArrayList<>(fridaCli.listDevices(project));
                 // add remotes from settings
-                var remotes = ApplicationManager.getApplication()
-                        .getService(ZaFridaSettingsService.class)
-                        .getRemoteHosts();
+                var settingsService = ApplicationManager.getApplication().getService(ZaFridaSettingsService.class);
+                var remotes = settingsService.getRemoteHosts();
                 for (String host : remotes) {
-                    devices.add(new FridaDevice("remote:" + host, "remote", "Remote", FridaDeviceMode.HOST, host));
+                    if (!containsHost(devices, host)) {
+                        devices.add(new FridaDevice("remote:" + host, "remote", "Remote", FridaDeviceMode.HOST, host));
+                    }
+                }
+
+                if (cfg != null && (connectionMode == FridaConnectionMode.REMOTE || connectionMode == FridaConnectionMode.GADGET)) {
+                    String host = resolveHostPort(cfg);
+                    if (!containsHost(devices, host)) {
+                        String type = connectionMode == FridaConnectionMode.GADGET ? "gadget" : "remote";
+                        String name = connectionMode == FridaConnectionMode.GADGET ? "Gadget" : "Remote";
+                        devices.add(new FridaDevice(type + ":" + host, type, name, FridaDeviceMode.HOST, host));
+                    }
                 }
 
                 ApplicationManager.getApplication().invokeLater(() -> {
-                    deviceCombo.removeAllItems();
-                    for (FridaDevice d : devices) deviceCombo.addItem(d);
-                    if (!devices.isEmpty()) deviceCombo.setSelectedIndex(0);
+                    updatingDeviceCombo = true;
+                    try {
+                        deviceCombo.removeAllItems();
+                        for (FridaDevice d : devices) deviceCombo.addItem(d);
+                        selectSavedDevice(devices, cfg);
+                    } finally {
+                        updatingDeviceCombo = false;
+                    }
                     consolePanel.info("[ZAFrida] Devices loaded: " + devices.size());
                     disableControls(false);
                 });
@@ -461,22 +511,127 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
         });
     }
 
+    private void applyConnectionUi(@NotNull ZaFridaProjectConfig cfg) {
+        FridaConnectionMode mode = cfg.connectionMode != null ? cfg.connectionMode : FridaConnectionMode.USB;
+        boolean gadgetMode = mode == FridaConnectionMode.GADGET;
+        spawnRadio.setEnabled(!gadgetMode);
+        attachRadio.setEnabled(!gadgetMode);
+        targetField.setEnabled(!gadgetMode);
+        if (gadgetMode) {
+            targetField.setToolTipText("Gadget mode uses -F; target is ignored.");
+        } else {
+            targetField.setToolTipText(null);
+        }
+    }
+
+    private void selectSavedDevice(@NotNull List<FridaDevice> devices, @Nullable ZaFridaProjectConfig cfg) {
+        FridaDevice match = null;
+        if (cfg != null) {
+            if (cfg.connectionMode == FridaConnectionMode.REMOTE || cfg.connectionMode == FridaConnectionMode.GADGET) {
+                String host = resolveHostPort(cfg);
+                match = findDeviceByHost(devices, host);
+            }
+            if (match == null) {
+                if (!StringUtil.isEmptyOrSpaces(cfg.lastDeviceHost)) {
+                    match = findDeviceByHost(devices, cfg.lastDeviceHost);
+                } else if (!StringUtil.isEmptyOrSpaces(cfg.lastDeviceId)) {
+                    match = findDeviceById(devices, cfg.lastDeviceId);
+                }
+            }
+        }
+        if (match != null) {
+            deviceCombo.setSelectedItem(match);
+            return;
+        }
+        if (!devices.isEmpty()) {
+            deviceCombo.setSelectedIndex(0);
+        }
+    }
+
+    private static @Nullable FridaDevice findDeviceByHost(@NotNull List<FridaDevice> devices, @NotNull String host) {
+        for (FridaDevice d : devices) {
+            if (host.equals(d.getHost())) {
+                return d;
+            }
+        }
+        return null;
+    }
+
+    private static @Nullable FridaDevice findDeviceById(@NotNull List<FridaDevice> devices, @NotNull String id) {
+        for (FridaDevice d : devices) {
+            if (id.equals(d.getId())) {
+                return d;
+            }
+        }
+        return null;
+    }
+
+    private static boolean containsHost(@NotNull List<FridaDevice> devices, @NotNull String host) {
+        return findDeviceByHost(devices, host) != null;
+    }
+
+    private @NotNull String resolveHostPort(@Nullable ZaFridaProjectConfig cfg) {
+        return resolveRemoteHost(cfg) + ":" + resolveRemotePort(cfg);
+    }
+
+    private @NotNull String resolveRemoteHost(@Nullable ZaFridaProjectConfig cfg) {
+        if (cfg != null && !StringUtil.isEmptyOrSpaces(cfg.remoteHost)) {
+            return cfg.remoteHost.trim();
+        }
+        ZaFridaSettingsState st = ApplicationManager.getApplication()
+                .getService(ZaFridaSettingsService.class)
+                .getState();
+        return safeHost(st.defaultRemoteHost);
+    }
+
+    private int resolveRemotePort(@Nullable ZaFridaProjectConfig cfg) {
+        if (cfg != null && cfg.remotePort > 0) {
+            return cfg.remotePort;
+        }
+        ZaFridaSettingsState st = ApplicationManager.getApplication()
+                .getService(ZaFridaSettingsService.class)
+                .getState();
+        return safePort(st.defaultRemotePort);
+    }
+
+    private static @NotNull String safeHost(@Nullable String host) {
+        if (host == null || host.isBlank()) return "127.0.0.1";
+        return host.trim();
+    }
+
+    private static int safePort(int port) {
+        return port > 0 ? port : 14725;
+    }
+
 
     private void runFrida() {
-        FridaDevice dev = (FridaDevice) deviceCombo.getSelectedItem();
-        if (dev == null) {
-            ZaFridaNotifier.warn(project, "ZAFrida", "No device selected");
-            return;
+        ZaFridaFridaProject active = fridaProjectManager.getActiveProject();
+        ZaFridaProjectConfig projectConfig = active != null ? fridaProjectManager.loadProjectConfig(active) : null;
+        FridaConnectionMode connectionMode = projectConfig != null && projectConfig.connectionMode != null
+                ? projectConfig.connectionMode
+                : FridaConnectionMode.USB;
+        boolean gadgetMode = connectionMode == FridaConnectionMode.GADGET;
+
+        FridaDevice dev;
+        if (connectionMode == FridaConnectionMode.REMOTE || gadgetMode) {
+            String host = resolveHostPort(projectConfig);
+            String type = gadgetMode ? "gadget" : "remote";
+            String name = gadgetMode ? "Gadget" : "Remote";
+            dev = new FridaDevice(type + ":" + host, type, name, FridaDeviceMode.HOST, host);
+        } else {
+            dev = (FridaDevice) deviceCombo.getSelectedItem();
+            if (dev == null) {
+                ZaFridaNotifier.warn(project, "ZAFrida", "No device selected");
+                return;
+            }
         }
 
         // 1) 先统一拿到 target（spawn=包名/进程名，attach=pid 字符串）
         String target = targetField.getText() != null ? targetField.getText().trim() : "";
-        if (target.isEmpty()) {
+        if (!gadgetMode && target.isEmpty()) {
             ZaFridaNotifier.warn(project, "ZAFrida", "Target is empty");
             return;
         }
-
-        ZaFridaFridaProject active = fridaProjectManager.getActiveProject();
 
         // 2) 脚本选择优先级：
         //    a) 用户手动选过的 scriptFile
@@ -497,7 +652,7 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
             }
         }
 
-        if (script == null && active != null && spawnRadio.isSelected()) {
+        if (script == null && active != null && spawnRadio.isSelected() && !gadgetMode) {
             VirtualFile auto = fridaProjectManager.ensureMainScriptForTarget(active, target);
             setScriptFile(auto);
             script = auto;
@@ -509,7 +664,7 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
         }
 
         // 3) 持久化配置：lastTarget / mainScript
-        if (active != null && spawnRadio.isSelected()) {
+        if (active != null && spawnRadio.isSelected() && !gadgetMode) {
             fridaProjectManager.updateProjectConfig(active, c -> c.lastTarget = target);
         }
         if (active != null) {
@@ -521,7 +676,9 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
 
         // 4) 构建 RunMode
         FridaRunMode mode;
-        if (spawnRadio.isSelected()) {
+        if (gadgetMode) {
+            mode = new FrontmostRunMode();
+        } else if (spawnRadio.isSelected()) {
             mode = new SpawnRunMode(target);
         } else {
             try {
@@ -536,7 +693,6 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
                 dev,
                 mode,
                 script.getPath(),
-                noPauseCheck.isSelected(),
                 extraArgsField.getText() != null ? extraArgsField.getText() : ""
         );
 

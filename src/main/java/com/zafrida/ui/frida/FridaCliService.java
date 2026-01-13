@@ -52,7 +52,9 @@ public final class FridaCliService {
         addDeviceArgs(cmd, config.getDevice());
 
         FridaRunMode mode = config.getMode();
-        if (mode instanceof SpawnRunMode) {
+        if (mode instanceof FrontmostRunMode) {
+            cmd.addParameter("-F");
+        } else if (mode instanceof SpawnRunMode) {
             cmd.addParameters("-f", ((SpawnRunMode) mode).getIdentifier());
         } else if (mode instanceof AttachPidRunMode) {
             cmd.addParameters("-p", String.valueOf(((AttachPidRunMode) mode).getPid()));
@@ -63,9 +65,6 @@ public final class FridaCliService {
         }
 
         cmd.addParameters("-l", config.getScriptPath());
-        if (config.isNoPause()) {
-            cmd.addParameter("--no-pause");
-        }
 
         String extra = config.getExtraArgs();
         if (extra != null && !extra.trim().isEmpty()) {
@@ -134,7 +133,12 @@ public final class FridaCliService {
             cmd.addParameters("-H", host);
             return;
         }
-        cmd.addParameters("-D", device.getId());
+        String id = device.getId();
+        if ("usb".equalsIgnoreCase(id)) {
+            cmd.addParameter("-U");
+        } else {
+            cmd.addParameters("-D", id);
+        }
     }
 
     private CapturedOut runCapturing(@NotNull GeneralCommandLine cmd, int timeoutMs) {

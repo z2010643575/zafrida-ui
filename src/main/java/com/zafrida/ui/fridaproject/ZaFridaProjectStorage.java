@@ -5,6 +5,7 @@ import com.intellij.openapi.project.Project;
 import com.intellij.openapi.vfs.VfsUtil;
 import com.intellij.openapi.vfs.VfsUtilCore;
 import com.intellij.openapi.vfs.VirtualFile;
+import com.zafrida.ui.frida.FridaConnectionMode;
 import com.zafrida.ui.frida.FridaProcessScope;
 import org.jdom.Document;
 import org.jdom.Element;
@@ -116,9 +117,22 @@ public final class ZaFridaProjectStorage {
         cfg.platform = ZaFridaPlatform.valueOf(root.getAttributeValue("platform", "ANDROID"));
         cfg.mainScript = root.getAttributeValue("mainScript", ZaFridaProjectFiles.DEFAULT_MAIN_SCRIPT);
         cfg.lastTarget = root.getAttributeValue("lastTarget");
+        cfg.targetManual = Boolean.parseBoolean(root.getAttributeValue("targetManual", "true"));
         cfg.processScope = FridaProcessScope.valueOf(
                 root.getAttributeValue("processScope", FridaProcessScope.RUNNING_APPS.name())
         );
+
+        String modeRaw = root.getAttributeValue("connectionMode", FridaConnectionMode.USB.name());
+        try {
+            cfg.connectionMode = FridaConnectionMode.valueOf(modeRaw);
+        } catch (IllegalArgumentException ignore) {
+            cfg.connectionMode = FridaConnectionMode.USB;
+        }
+
+        cfg.remoteHost = root.getAttributeValue("remoteHost", "127.0.0.1");
+        cfg.remotePort = parseInt(root.getAttributeValue("remotePort"), 14725);
+        cfg.lastDeviceId = root.getAttributeValue("lastDeviceId");
+        cfg.lastDeviceHost = root.getAttributeValue("lastDeviceHost");
         return cfg;
     }
 
@@ -129,8 +143,23 @@ public final class ZaFridaProjectStorage {
         root.setAttribute("platform", cfg.platform.name());
         root.setAttribute("mainScript", cfg.mainScript);
         if (cfg.lastTarget != null) root.setAttribute("lastTarget", cfg.lastTarget);
+        root.setAttribute("targetManual", String.valueOf(cfg.targetManual));
         root.setAttribute("processScope", cfg.processScope.name());
+        root.setAttribute("connectionMode", cfg.connectionMode.name());
+        root.setAttribute("remoteHost", cfg.remoteHost);
+        root.setAttribute("remotePort", String.valueOf(cfg.remotePort));
+        if (cfg.lastDeviceId != null) root.setAttribute("lastDeviceId", cfg.lastDeviceId);
+        if (cfg.lastDeviceHost != null) root.setAttribute("lastDeviceHost", cfg.lastDeviceHost);
         return new XMLOutputter(Format.getPrettyFormat()).outputString(new Document(root));
+    }
+
+    private static int parseInt(@Nullable String value, int fallback) {
+        if (value == null || value.isBlank()) return fallback;
+        try {
+            return Integer.parseInt(value.trim());
+        } catch (NumberFormatException e) {
+            return fallback;
+        }
     }
 
     // 仅在外层已经处于 write-action 时调用
