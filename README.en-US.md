@@ -111,7 +111,7 @@ Technical Architecture
 - Language: Java 21, Kotlin
 - Framework: IntelliJ Platform SDK
 - Build Tool: Gradle
-- Dependency: `frida-tools` (Python environment)
+- Dependency: `frida` `frida-tools` (Python environment)
 
 Acknowledgements
 -----------------------------------
