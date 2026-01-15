@@ -4,9 +4,11 @@ import org.jetbrains.annotations.NotNull;
 
 public class InsertEnumerateModulesAction extends InsertFridaSnippetAction {
     private static final @NotNull String SNIPPET = String.join("\n",
-            "Process.enumerateModules().forEach(function (m) {",
-            "  console.log(m.name + \" \" + m.base);",
-            "});"
+            """
+                    Process.enumerateModules().forEach(function (m) {
+                      console.log(m.name + " " + m.base);
+                    });
+                    """
     );
 
     public InsertEnumerateModulesAction() {
