@@ -23,7 +23,7 @@
 
         <toolWindow
                 id="ZAFrida"
-                anchor="bottom"
+                anchor="right"
                 factoryClass="com.zafrida.ui.toolwindow.ZaFridaToolWindowFactory"
                 icon="META-INF/pluginIcon.svg"/>
 
