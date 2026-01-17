@@ -12,6 +12,7 @@ import com.intellij.icons.AllIcons;
 import com.intellij.openapi.options.ShowSettingsUtil;
 import com.intellij.openapi.ui.ComboBox;
 import com.intellij.openapi.ui.Messages;
+import com.intellij.openapi.vfs.LocalFileSystem;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.util.SlowOperations;
 import com.intellij.ui.components.JBTextField;
@@ -71,10 +72,11 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
     private final @NotNull ZaFridaSessionService sessionService;
 
     private final ComboBox<FridaDevice> deviceCombo = new ComboBox<>();
-    private final JButton refreshDevicesBtn = new JButton("Refresh");
-    private final JButton addRemoteBtn = new JButton("+Remote");
+    private final JButton refreshDevicesBtn = new JButton("");
+    private final JButton addRemoteBtn = new JButton("Remote");
 
     private final JBTextField scriptField = new JBTextField();
+    private final JButton locateScriptBtn = new JButton("");
     private final JButton chooseScriptBtn = new JButton("Choose...");
 
     private final JRadioButton spawnRadio = new JRadioButton("Spawn (-f)", true);
@@ -157,6 +159,8 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
 
         refreshDevicesBtn.setIcon(AllIcons.Actions.Refresh);
         addRemoteBtn.setIcon(AllIcons.General.Add);
+        locateScriptBtn.setIcon(AllIcons.General.Locate);
+        locateScriptBtn.setToolTipText("Locate script in Project View");
         chooseScriptBtn.setIcon(AllIcons.Actions.MenuOpen);
         runBtn.setIcon(AllIcons.Actions.Execute);
         stopBtn.setIcon(AllIcons.Actions.Suspend);
@@ -236,6 +240,8 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
                 if (rel != null) fridaProjectManager.updateProjectConfig(active, c -> c.mainScript = rel);
             }
         });
+
+        locateScriptBtn.addActionListener(e -> locateScriptInProjectView());
 
     }
 
@@ -481,6 +487,7 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
         JPanel p = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
         scriptField.setColumns(22);
         p.add(scriptField);
+        p.add(locateScriptBtn);
         p.add(chooseScriptBtn);
         return p;
     }
@@ -532,6 +539,33 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
         this.scriptFile = file;
         this.scriptField.setText(file.getPath());
         this.templatePanel.setCurrentScriptFile(file);
+    }
+
+    private void locateScriptInProjectView() {
+        String path = scriptField.getText();
+        VirtualFile file = resolveScriptFileForLocate();
+        if (file == null || !file.isValid() || file.isDirectory()) {
+            if (StringUtil.isEmptyOrSpaces(path)) {
+                ZaFridaNotifier.warn(project, "ZAFrida", "No script file selected");
+            } else {
+                ZaFridaNotifier.warn(project, "ZAFrida", "Script file not found: " + path.trim());
+            }
+            return;
+        }
+        ProjectFileUtil.openAndSelectInProject(project, file);
+    }
+
+    private @Nullable VirtualFile resolveScriptFileForLocate() {
+        if (scriptFile != null && scriptFile.isValid()) {
+            return scriptFile;
+        }
+        VirtualFile templateFile = templatePanel.getCurrentScriptFile();
+        if (templateFile != null && templateFile.isValid()) {
+            return templateFile;
+        }
+        String path = scriptField.getText();
+        if (StringUtil.isEmptyOrSpaces(path)) return null;
+        return LocalFileSystem.getInstance().findFileByPath(path.trim());
     }
 
 

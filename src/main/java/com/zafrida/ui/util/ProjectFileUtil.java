@@ -1,5 +1,6 @@
 package com.zafrida.ui.util;
 
+import com.intellij.ide.projectView.ProjectView;
 import com.intellij.openapi.command.WriteCommandAction;
 import com.intellij.openapi.fileChooser.FileChooser;
 import com.intellij.openapi.fileChooser.FileChooserDescriptor;
@@ -8,6 +9,8 @@ import com.intellij.openapi.fileEditor.FileEditorManager;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.vfs.VfsUtil;
 import com.intellij.openapi.vfs.VirtualFile;
+import com.intellij.psi.PsiFile;
+import com.intellij.psi.PsiManager;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -94,5 +97,16 @@ public final class ProjectFileUtil {
         });
 
         return out[0];
+    }
+
+    public static void openAndSelectInProject(@NotNull Project project, @NotNull VirtualFile file) {
+        FileEditorManager.getInstance(project).openFile(file, true);
+        ProjectView view = ProjectView.getInstance(project);
+        PsiFile psiFile = PsiManager.getInstance(project).findFile(file);
+        if (psiFile != null) {
+            view.selectPsiElement(psiFile, true);
+        } else {
+            view.select(null, file, true);
+        }
     }
 }
