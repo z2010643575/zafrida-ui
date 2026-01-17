@@ -52,6 +52,7 @@ public final class ZaFridaSettingsConfigurable implements SearchableConfigurable
         copy.logsDirName = settingsService.getState().logsDirName;
         copy.defaultRemoteHost = settingsService.getState().defaultRemoteHost;
         copy.defaultRemotePort = settingsService.getState().defaultRemotePort;
+        copy.useIdeScriptChooser = settingsService.getState().useIdeScriptChooser;
         copy.remoteHosts = settingsService.getRemoteHosts();
 
         component.applyTo(copy);
@@ -64,6 +65,7 @@ public final class ZaFridaSettingsConfigurable implements SearchableConfigurable
         if (!safeEq(copy.logsDirName, current.logsDirName)) return true;
         if (!safeEq(copy.defaultRemoteHost, current.defaultRemoteHost)) return true;
         if (copy.defaultRemotePort != current.defaultRemotePort) return true;
+        if (copy.useIdeScriptChooser != current.useIdeScriptChooser) return true;
 
         if (copy.remoteHosts == null && current.remoteHosts != null && !current.remoteHosts.isEmpty()) return true;
         if (copy.remoteHosts != null && current.remoteHosts == null && !copy.remoteHosts.isEmpty()) return true;
@@ -82,6 +84,7 @@ public final class ZaFridaSettingsConfigurable implements SearchableConfigurable
         newState.logsDirName = settingsService.getState().logsDirName;
         newState.defaultRemoteHost = settingsService.getState().defaultRemoteHost;
         newState.defaultRemotePort = settingsService.getState().defaultRemotePort;
+        newState.useIdeScriptChooser = settingsService.getState().useIdeScriptChooser;
         newState.remoteHosts = settingsService.getRemoteHosts();
 
         component.applyTo(newState);

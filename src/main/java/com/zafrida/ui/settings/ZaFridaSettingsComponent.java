@@ -1,6 +1,7 @@
 package com.zafrida.ui.settings;
 
 import com.intellij.icons.AllIcons;
+import com.intellij.ui.components.JBCheckBox;
 import com.intellij.ui.components.JBList;
 import com.intellij.ui.components.JBScrollPane;
 import com.intellij.ui.components.JBTextField;
@@ -36,6 +37,7 @@ public final class ZaFridaSettingsComponent {
     private final JBTextField logsDirField = new JBTextField();
     private final JBTextField defaultRemoteHostField = new JBTextField();
     private final JBTextField defaultRemotePortField = new JBTextField();
+    private final JBCheckBox useIdeScriptChooserCheckBox = new JBCheckBox("Use IDE script chooser (Project tree)");
 
     private final DefaultListModel<String> remoteModel = new DefaultListModel<>();
     private final JBList<String> remoteList = new JBList<>(remoteModel);
@@ -70,6 +72,7 @@ public final class ZaFridaSettingsComponent {
                 .addLabeledComponent("frida-ps", fridaPsField, 1, false)
                 .addLabeledComponent("frida-ls-devices", fridaLsDevicesField, 1, false)
                 .addLabeledComponent("Logs Dir (relative to project)", logsDirField, 1, false)
+                .addLabeledComponent("Script Chooser", useIdeScriptChooserCheckBox, 1, false)
                 .addLabeledComponent("Default Remote Host:Port", defaultRemotePanel, 1, false)
                 .addLabeledComponent("Remote Hosts (host:port)", remotePanel, 1, false)
                 .getPanel();
@@ -103,6 +106,7 @@ public final class ZaFridaSettingsComponent {
         logsDirField.setText(orDefault(state.logsDirName, "zafrida-logs"));
         defaultRemoteHostField.setText(orDefault(state.defaultRemoteHost, "127.0.0.1"));
         defaultRemotePortField.setText(String.valueOf(state.defaultRemotePort > 0 ? state.defaultRemotePort : 14725));
+        useIdeScriptChooserCheckBox.setSelected(state.useIdeScriptChooser);
 
         remoteModel.clear();
         if (state.remoteHosts != null) {
@@ -119,6 +123,7 @@ public final class ZaFridaSettingsComponent {
         state.logsDirName = textOrDefault(logsDirField.getText(), "zafrida-logs");
         state.defaultRemoteHost = textOrDefault(defaultRemoteHostField.getText(), "127.0.0.1");
         state.defaultRemotePort = parsePort(defaultRemotePortField.getText(), 14725);
+        state.useIdeScriptChooser = useIdeScriptChooserCheckBox.isSelected();
 
         List<String> remotes = new ArrayList<>();
         for (int i = 0; i < remoteModel.size(); i++) {

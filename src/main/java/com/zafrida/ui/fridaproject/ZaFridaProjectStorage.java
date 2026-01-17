@@ -68,6 +68,7 @@ public final class ZaFridaProjectStorage {
             if (f == null) {
                 ZaFridaProjectConfig c = new ZaFridaProjectConfig();
                 c.name = fridaProjectDir.getName();
+                c.mainScript = ZaFridaProjectFiles.defaultMainScriptName(c.name);
                 // platform 由目录路径推断或由 manager 传入覆盖
                 out[0] = c;
                 return;
@@ -78,6 +79,7 @@ public final class ZaFridaProjectStorage {
             } catch (Throwable t) {
                 ZaFridaProjectConfig c = new ZaFridaProjectConfig();
                 c.name = fridaProjectDir.getName();
+                c.mainScript = ZaFridaProjectFiles.defaultMainScriptName(c.name);
                 out[0] = c;
             }
         });
@@ -85,6 +87,7 @@ public final class ZaFridaProjectStorage {
         if (out[0] != null) return out[0];
         ZaFridaProjectConfig c = new ZaFridaProjectConfig();
         c.name = fridaProjectDir.getName();
+        c.mainScript = ZaFridaProjectFiles.defaultMainScriptName(c.name);
         return c;
     }
 
@@ -142,8 +145,15 @@ public final class ZaFridaProjectStorage {
         ZaFridaProjectConfig cfg = new ZaFridaProjectConfig();
         cfg.name = root.getAttributeValue("name", "");
         cfg.platform = ZaFridaPlatform.valueOf(root.getAttributeValue("platform", "ANDROID"));
-        cfg.mainScript = root.getAttributeValue("mainScript", ZaFridaProjectFiles.DEFAULT_MAIN_SCRIPT);
+        String mainScriptAttr = root.getAttributeValue("mainScript");
+        if (mainScriptAttr == null || mainScriptAttr.isBlank()) {
+            cfg.mainScript = ZaFridaProjectFiles.defaultMainScriptName(cfg.name);
+        } else {
+            cfg.mainScript = mainScriptAttr;
+        }
         cfg.lastTarget = root.getAttributeValue("lastTarget");
+        cfg.spawnMode = Boolean.parseBoolean(root.getAttributeValue("spawnMode", "true"));
+        cfg.extraArgs = root.getAttributeValue("extraArgs", "");
         cfg.targetManual = Boolean.parseBoolean(root.getAttributeValue("targetManual", "true"));
         cfg.processScope = FridaProcessScope.valueOf(
                 root.getAttributeValue("processScope", FridaProcessScope.RUNNING_APPS.name())
@@ -169,6 +179,8 @@ public final class ZaFridaProjectStorage {
         root.setAttribute("name", cfg.name);
         root.setAttribute("platform", cfg.platform.name());
         root.setAttribute("mainScript", cfg.mainScript);
+        root.setAttribute("spawnMode", String.valueOf(cfg.spawnMode));
+        root.setAttribute("extraArgs", cfg.extraArgs == null ? "" : cfg.extraArgs);
         if (cfg.lastTarget != null) root.setAttribute("lastTarget", cfg.lastTarget);
         root.setAttribute("targetManual", String.valueOf(cfg.targetManual));
         root.setAttribute("processScope", cfg.processScope.name());

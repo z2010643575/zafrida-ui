@@ -34,6 +34,22 @@ public final class ProjectFileUtil {
         return FileChooser.chooseFile(descriptor, project, null);
     }
 
+    public static @Nullable VirtualFile chooseJavaScriptFileInProject(@NotNull Project project,
+                                                                      @Nullable VirtualFile initialDir) {
+        FileChooserDescriptor descriptor = FileChooserDescriptorFactory.createSingleFileDescriptor("js");
+        descriptor.setTitle("Select Frida JS Script");
+        descriptor.setDescription("Select a JavaScript file inside your project");
+        descriptor.setForcedToUseIdeaFileChooser(true);
+
+        VirtualFile base = project.getBaseDir();
+        if (base != null) {
+            descriptor.setRoots(base);
+        }
+
+        VirtualFile start = initialDir != null ? initialDir : base;
+        return FileChooser.chooseFile(descriptor, project, start);
+    }
+
     public static @Nullable VirtualFile createScript(@NotNull Project project,
                                                      @NotNull String relativePath,
                                                      @NotNull String content) {

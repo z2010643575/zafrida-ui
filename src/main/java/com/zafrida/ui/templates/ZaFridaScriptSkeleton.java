@@ -1,6 +1,6 @@
 package com.zafrida.ui.templates;
 /**
- * [常量] 默认的主脚本 (agent.js) 骨架。
+ * [常量] 默认的主脚本骨架。
  * <p>
  * <strong>AI 关键指令：</strong>
  * 必须包含 {@code //== ZAFrida:TEMPLATES:BEGIN ==} 和 {@code END} 标记。

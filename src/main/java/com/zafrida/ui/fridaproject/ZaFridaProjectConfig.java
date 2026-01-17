@@ -25,6 +25,12 @@ public final class ZaFridaProjectConfig {
     // 主脚本（相对项目文件夹）
     public @NotNull String mainScript = ZaFridaProjectFiles.DEFAULT_MAIN_SCRIPT;
 
+    // Run 模式：true=Spawn, false=Attach
+    public boolean spawnMode = true;
+
+    // 额外参数（传给 frida CLI）
+    public @NotNull String extraArgs = "";
+
     // 上次调试目标（Android package / iOS bundle）
     public @Nullable String lastTarget = null;
 

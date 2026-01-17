@@ -18,6 +18,7 @@ import com.zafrida.ui.fridaproject.ZaFridaProjectConfig;
 import com.zafrida.ui.fridaproject.ZaFridaProjectManager;
 import com.zafrida.ui.settings.ZaFridaSettingsService;
 import com.zafrida.ui.settings.ZaFridaSettingsState;
+import com.zafrida.ui.util.ZaFridaIcons;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -68,6 +69,8 @@ public final class ZaFridaProjectSettingsDialog extends DialogWrapper {
     private final ComboBox<String> targetCombo = new ComboBox<>();
     private final JButton refreshTargetsBtn = new JButton("Refresh");
 
+    private final JLabel projectInfoLabel = new JLabel();
+
     private @Nullable ZaFridaFridaProject activeProject;
 
     public ZaFridaProjectSettingsDialog(@NotNull Project project,
@@ -81,6 +84,7 @@ public final class ZaFridaProjectSettingsDialog extends DialogWrapper {
         this.fridaCliService = fridaCliService;
         this.deviceSupplier = deviceSupplier;
         this.errorLogger = errorLogger;
+        projectInfoLabel.setIconTextGap(6);
         refreshTargetsBtn.setIcon(AllIcons.Actions.Refresh);
         setTitle("ZAFrida Project Settings");
         setOKButtonText("Save");
@@ -107,6 +111,12 @@ public final class ZaFridaProjectSettingsDialog extends DialogWrapper {
         fieldC.insets = new Insets(6, 8, 6, 8);
 
         int row = 0;
+        labelC.gridy = row;
+        fieldC.gridy = row;
+        panel.add(new JLabel("Project"), labelC);
+        panel.add(projectInfoLabel, fieldC);
+
+        row++;
         labelC.gridy = row;
         fieldC.gridy = row;
         panel.add(new JLabel("Connection Mode"), labelC);
@@ -202,6 +212,7 @@ public final class ZaFridaProjectSettingsDialog extends DialogWrapper {
 
     private void loadFromProject() {
         activeProject = projectManager.getActiveProject();
+        updateProjectInfo();
         if (activeProject == null) {
             connectionModeCombo.setEnabled(false);
             remoteHostField.setEnabled(false);
@@ -240,6 +251,18 @@ public final class ZaFridaProjectSettingsDialog extends DialogWrapper {
         if (selectTargetRadio.isSelected()) {
             refreshTargets();
         }
+    }
+
+    private void updateProjectInfo() {
+        if (activeProject == null) {
+            projectInfoLabel.setIcon(null);
+            projectInfoLabel.setText("No active project");
+            projectInfoLabel.setToolTipText("No active project");
+            return;
+        }
+        projectInfoLabel.setIcon(ZaFridaIcons.forPlatform(activeProject.getPlatform()));
+        projectInfoLabel.setText(activeProject.getName());
+        projectInfoLabel.setToolTipText("Platform: " + activeProject.getPlatform().name());
     }
 
     private void refreshTargets() {

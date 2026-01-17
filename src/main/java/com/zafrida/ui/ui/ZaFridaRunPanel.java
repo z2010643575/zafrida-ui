@@ -24,8 +24,10 @@ import com.zafrida.ui.session.ZaFridaSessionService;
 import com.zafrida.ui.python.ProjectPythonEnvResolver;
 import com.zafrida.ui.python.PythonEnvInfo;
 import com.zafrida.ui.ui.components.SearchableComboBoxPanel;
+import com.zafrida.ui.ui.components.SimpleDocumentListener;
 import com.zafrida.ui.ui.render.DeviceCellRenderer;
 import com.zafrida.ui.util.ProjectFileUtil;
+import com.zafrida.ui.util.ZaFridaIcons;
 import com.zafrida.ui.util.ZaFridaNotifier;
 import com.zafrida.ui.settings.ZaFridaSettingsService;
 import com.zafrida.ui.settings.ZaFridaSettingsState;
@@ -95,8 +97,10 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
     private final ZaFridaProjectManager fridaProjectManager;
     private final SearchableComboBoxPanel<ZaFridaFridaProject> fridaProjectSelector =
             new SearchableComboBoxPanel<>(p -> p == null ? "" : p.getName());
+    private final JLabel projectTypeIcon = new JLabel();
     private boolean updatingFridaProjectSelector = false;
     private boolean updatingDeviceCombo = false;
+    private boolean updatingRunFields = false;
     private @Nullable JButton externalRunBtn;
     private @Nullable JButton externalStopBtn;
 
@@ -142,6 +146,7 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
         deviceCombo.setRenderer(new DeviceCellRenderer());
         scriptField.setEditable(false);
         extraArgsField.setToolTipText("Extra args passed to frida, e.g. --realm=emulated");
+        projectTypeIcon.setToolTipText("Project platform");
 
         ButtonGroup group = new ButtonGroup();
         group.add(spawnRadio);
@@ -162,6 +167,7 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
 
     private JPanel buildFridaProjectRow() {
         JPanel row = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
+        row.add(projectTypeIcon);
         row.add(fridaProjectSelector);
         return row;
     }
@@ -212,17 +218,15 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
             if (updatingFridaProjectSelector) return;
             fridaProjectManager.setActiveProject(fridaProjectSelector.getSelectedItem());
         });
+
+        spawnRadio.addActionListener(e -> persistRunMode());
+        attachRadio.addActionListener(e -> persistRunMode());
+        extraArgsField.getDocument().addDocumentListener(new SimpleDocumentListener(this::persistExtraArgs));
+
         chooseScriptBtn.addActionListener(e -> {
             ZaFridaFridaProject active = fridaProjectManager.getActiveProject();
             VirtualFile initial = active != null ? fridaProjectManager.resolveProjectDir(active) : null;
-
-            VirtualFile file = null;
-            if (initial != null) {
-                FileChooserDescriptor d = new FileChooserDescriptor(true, false, false, false, false, false);
-                d.withFileFilter(vf -> "js".equalsIgnoreCase(vf.getExtension()));
-                file = FileChooser.chooseFile(d, project, initial);
-            }
-            if (file == null) file = ProjectFileUtil.chooseJavaScriptFile(project);
+            VirtualFile file = chooseScriptFile(initial);
             if (file == null) return;
 
             setScriptFile(file);
@@ -274,6 +278,7 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
             updatingFridaProjectSelector = false;
         }
 
+        updateProjectTypeIcon(active);
         templatePanel.setCurrentPlatform(active == null ? null : active.getPlatform());
 
         if (active == null) {
@@ -287,6 +292,18 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
         }
 
         ZaFridaProjectConfig cfg = fridaProjectManager.loadProjectConfig(active);
+
+        updatingRunFields = true;
+        try {
+            if (cfg.spawnMode) {
+                spawnRadio.setSelected(true);
+            } else {
+                attachRadio.setSelected(true);
+            }
+            extraArgsField.setText(cfg.extraArgs == null ? "" : cfg.extraArgs);
+        } finally {
+            updatingRunFields = false;
+        }
 
         // 1) 恢复 lastTarget（由设置页保存）
         if (!StringUtil.isEmptyOrSpaces(cfg.lastTarget)) {
@@ -313,6 +330,49 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
         }
 
         reloadDevicesAsync();
+    }
+
+    private void updateProjectTypeIcon(@Nullable ZaFridaFridaProject active) {
+        if (active == null) {
+            projectTypeIcon.setIcon(null);
+            projectTypeIcon.setToolTipText("No active project");
+            return;
+        }
+        projectTypeIcon.setIcon(ZaFridaIcons.forPlatform(active.getPlatform()));
+        projectTypeIcon.setToolTipText("Platform: " + active.getPlatform().name());
+    }
+
+    private void persistRunMode() {
+        if (updatingRunFields) return;
+        ZaFridaFridaProject active = fridaProjectManager.getActiveProject();
+        if (active == null) return;
+        boolean spawn = spawnRadio.isSelected();
+        fridaProjectManager.updateProjectConfig(active, c -> c.spawnMode = spawn);
+    }
+
+    private void persistExtraArgs() {
+        if (updatingRunFields) return;
+        ZaFridaFridaProject active = fridaProjectManager.getActiveProject();
+        if (active == null) return;
+        String args = extraArgsField.getText();
+        fridaProjectManager.updateProjectConfig(active, c -> c.extraArgs = args == null ? "" : args);
+    }
+
+    private @Nullable VirtualFile chooseScriptFile(@Nullable VirtualFile initialDir) {
+        ZaFridaSettingsState st = ApplicationManager.getApplication()
+                .getService(ZaFridaSettingsService.class)
+                .getState();
+        if (st.useIdeScriptChooser) {
+            return ProjectFileUtil.chooseJavaScriptFileInProject(project, initialDir);
+        }
+
+        if (initialDir != null) {
+            FileChooserDescriptor d = new FileChooserDescriptor(true, false, false, false, false, false);
+            d.withFileFilter(vf -> "js".equalsIgnoreCase(vf.getExtension()));
+            VirtualFile picked = FileChooser.chooseFile(d, project, initialDir);
+            if (picked != null) return picked;
+        }
+        return ProjectFileUtil.chooseJavaScriptFile(project);
     }
     private void createNewFridaProject() {
         CreateZaFridaProjectDialog dialog = new CreateZaFridaProjectDialog(project);

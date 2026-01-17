@@ -95,12 +95,14 @@ public final class ZaFridaProjectManager {
             ZaFridaProjectConfig cfg = new ZaFridaProjectConfig();
             cfg.name = safeName;
             cfg.platform = platform;
-            cfg.mainScript = ZaFridaProjectFiles.DEFAULT_MAIN_SCRIPT;
+            cfg.mainScript = ZaFridaProjectFiles.defaultMainScriptName(safeName);
             cfg.processScope = FridaProcessScope.RUNNING_APPS;
             cfg.connectionMode = FridaConnectionMode.USB;
             cfg.remoteHost = "127.0.0.1";
             cfg.remotePort = 14725;
             cfg.targetManual = true;
+            cfg.spawnMode = true;
+            cfg.extraArgs = "";
 
             // 这里不要再内部再套 WriteCommandAction（避免嵌套）
             storage.saveProjectConfigNoWriteAction(projectDir, cfg);
@@ -188,7 +190,8 @@ public final class ZaFridaProjectManager {
         if (dir == null) throw new IllegalStateException("Project dir not found");
 
         ZaFridaProjectConfig cfg = storage.loadProjectConfig(project, dir);
-        String oldMain = StringUtil.notNullize(cfg.mainScript, ZaFridaProjectFiles.DEFAULT_MAIN_SCRIPT);
+        String defaultMain = ZaFridaProjectFiles.defaultMainScriptName(p.getName());
+        String oldMain = StringUtil.isEmptyOrSpaces(cfg.mainScript) ? defaultMain : cfg.mainScript;
 
         String leaf = targetLeaf(targetId);
         String autoName = leaf + ".js";
@@ -202,11 +205,18 @@ public final class ZaFridaProjectManager {
             if (created != null) return created;
         }
 
+        if (StringUtil.isEmptyOrSpaces(cfg.mainScript)) {
+            cfg.mainScript = defaultMain;
+            storage.saveProjectConfig(project, dir, cfg);
+        }
         ensureFile(dir, cfg.mainScript, defaultAgentSkeleton());
         VirtualFile vf = dir.findChild(cfg.mainScript);
         if (vf != null) return vf;
 
         // fallback
+        ensureFile(dir, defaultMain, defaultAgentSkeleton());
+        VirtualFile fallback = dir.findChild(defaultMain);
+        if (fallback != null) return fallback;
         ensureFile(dir, ZaFridaProjectFiles.DEFAULT_MAIN_SCRIPT, defaultAgentSkeleton());
         return Objects.requireNonNull(dir.findChild(ZaFridaProjectFiles.DEFAULT_MAIN_SCRIPT));
     }
