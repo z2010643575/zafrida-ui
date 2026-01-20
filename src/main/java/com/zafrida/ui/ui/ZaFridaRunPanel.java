@@ -87,8 +87,8 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
     private final JButton runBtn = new JButton("Run");
     private final JButton attachBtn = new JButton("Attach");
     private final JButton stopBtn = new JButton("Stop");
-    private final JButton forceStopBtn = new JButton("Force Stop App");
-    private final JButton openAppBtn = new JButton("Open App");
+    private final JButton forceStopBtn = new JButton("S App");
+    private final JButton openAppBtn = new JButton("O App");
     private final JButton clearConsoleBtn = new JButton("Clear Console");
 
     private final JLabel logFileLabel = new JLabel("Log: (not started)");
@@ -151,11 +151,14 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
         deviceCombo.setRenderer(new DeviceCellRenderer());
         runScriptField.setEditable(false);
         attachScriptField.setEditable(false);
+        runScriptField.setColumns(23);
+        attachScriptField.setColumns(23);
+
         extraArgsField.setToolTipText("Extra args passed to frida, e.g. --realm=emulated");
         projectTypeIcon.setToolTipText("Project platform");
 
-        targetField.setColumns(18);
-        extraArgsField.setColumns(18);
+        targetField.setColumns(23);
+        extraArgsField.setColumns(23);
         targetField.setToolTipText("Spawn uses package name; Attach uses PID");
 
         refreshDevicesBtn.setIcon(AllIcons.Actions.Refresh);
@@ -177,8 +180,8 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
 
     private JPanel buildFridaProjectRow() {
         JPanel row = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
-        row.add(projectTypeIcon);
         row.add(fridaProjectSelector);
+        row.add(projectTypeIcon);
         return row;
     }
 
@@ -505,6 +508,10 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
         forceStopApp();
     }
 
+    public void triggerOpenApp() {
+        openApp();
+    }
+
     public void triggerClearConsole() {
         consolePanel.clear();
     }
@@ -523,6 +530,7 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
     private JPanel buildDeviceRow() {
         JPanel p = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
         deviceCombo.setPrototypeDisplayValue(new FridaDevice("usb", "usb", "Android"));
+        deviceCombo.setMinimumAndPreferredWidth(258);
         p.add(deviceCombo);
         p.add(refreshDevicesBtn);
         p.add(addRemoteBtn);
@@ -556,8 +564,8 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
 
     private JPanel buildExtraRow() {
         JPanel p = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
-        p.add(new JLabel("Args:"));
         p.add(extraArgsField);
+        p.add(new JLabel("(Args)"));
         return p;
     }
 

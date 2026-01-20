@@ -36,6 +36,8 @@ public final class SearchableComboBoxPanel<T> extends JPanel {
         search.getEmptyText().setText("Search...");
         combo.setModel(model);
 
+        combo.setMinimumAndPreferredWidth(258);
+
         search.getDocument().addDocumentListener(new SimpleDocumentListener(this::refilter));
 
         add(search, BorderLayout.NORTH);

@@ -110,9 +110,13 @@ public final class ZaFridaMainToolWindow extends JPanel implements Disposable {
         stopBtn.setIcon(AllIcons.Actions.Suspend);
         stopBtn.addActionListener(e -> runPanel.triggerStop());
 
-        JButton forceStopBtn = new JButton("Force Stop App");
+        JButton forceStopBtn = new JButton("S App");
         forceStopBtn.setIcon(AllIcons.Actions.Cancel);
         forceStopBtn.addActionListener(e -> runPanel.triggerForceStop());
+
+        JButton openAppBtn = new JButton("S App");
+        openAppBtn.setIcon(AllIcons.Actions.Execute);
+        openAppBtn.addActionListener(e -> runPanel.triggerOpenApp());
 
         JButton clearConsoleBtn = new JButton("Clear Console");
         clearConsoleBtn.setIcon(AllIcons.Actions.ClearCash);
@@ -123,6 +127,7 @@ public final class ZaFridaMainToolWindow extends JPanel implements Disposable {
         runRow.add(runBtn);
         runRow.add(stopBtn);
         runRow.add(forceStopBtn);
+        runRow.add(openAppBtn);
         runRow.add(clearConsoleBtn);
 
         header.add(projectRow);
