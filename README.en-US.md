@@ -44,21 +44,61 @@ Quick Start
 Features
 -----------------------------------
 
-* **Device & Process Management**: Integrated with `frida-ls-devices` and `frida-ps`. Supports one-click refresh of device lists and viewing running processes, running apps, or installed applications.
-* **Multi-Mode Connection**: Full support for **USB**, **Remote**, and **Gadget** modes. Supports custom Remote Host and Port without complex command-line arguments.
-* **Interactive Script Execution**:
-    * Supports **Spawn** (`-f`) and **Attach** (`-p`/`-N`) modes.
-    * Supports **Force Stop** for target applications.
-    * Built-in console log output with automatic log saving to the `zafrida-logs/` directory.
-* **Dynamic Template System (Core Innovation)**:
-    * Provides common Android/iOS Hook templates (e.g., SSL Pinning Bypass, Method Hook, Native Hook).
-    * **Checkbox Control**: Check to enable (insert code), uncheck to disable (auto-comment code). No need to delete code manually.
-    * Supports custom templates and real-time preview from the IDE editor.
-* **Project Configuration**:
-    * Introduces the "ZAFrida Project" concept, saving specific App Hook configurations (package name, script path, connection params) as config files.
-    * Supports creating and switching between different Frida projects within the IDE.
-* **Smart Environment Resolution**: Automatically detects the current PyCharm project's Python environment (venv/conda) to ensure the correct `frida` toolchain is used.
-* **Development Aids**: Supports one-click installation of `frida-gum.d.ts` for intelligent code completion in JS scripts.
+* **Device & Process Management**  
+  Integrated with `frida-ls-devices` and `frida-ps`, supporting one-click device refresh and viewing running processes, apps, or installed packages.
+
+* **Multiple Connection Modes**  
+  Full support for **USB**, **Remote**, and **Gadget** modes, with customizable remote host and port—no need to manually construct complex CLI arguments.
+
+* **Interactive Script Execution (Run / Attach)**
+    * Supports **Run (default Spawn)** and **Attach** as explicit execution actions rather than a simple mode switch.
+    * Supports **Force Stop** to terminate target applications.
+    * Built-in console output with automatic log persistence to the `zafrida-logs/` directory.
+
+* **JS Editor Context Menu (Important)**
+    * Right-click inside a Frida JS editor to directly choose:
+        * **Run Frida JS** – run the currently opened JS file as the main script (default Spawn).
+        * **Attach Frida JS** – attach the currently opened JS file to an already running target process.
+    * The file is automatically saved before execution, and the corresponding ZAFrida Project is auto-selected.
+    * Ideal for quick PoC validation, demos, Gadget mode, or attaching to live processes.
+    * **Shortcut**:
+        * Windows / Linux: `Ctrl + Alt + S`
+        * macOS: `⌘ + ⌥ + S`
+
+* **Editor Snippets Insertion**
+    * Provides **ZAFrida Frida Snippets** in the JS editor context menu.
+    * One-click insertion of common Frida code patterns, including:
+        * `Java.perform` wrappers
+        * Java method hook templates
+        * Native hooks via `Interceptor.attach`
+        * Module / export enumeration
+        * `send()` log helpers
+    * Insertions are performed via WriteCommandAction, fully undo/redo safe.
+
+* **Dynamic Template System (Core Innovation)**
+    * Built-in Android / iOS hook templates (e.g., SSL Pinning Bypass, Method Hook, Native Hook).
+    * **Checkbox-driven control**: check to insert code, uncheck to automatically comment it out—no manual deletion required.
+    * Supports custom templates with real-time preview inside the IDE.
+
+* **Run Script + Attach Script Separation**
+    * Supports a primary **Run Script** and an independent **Attach Script**.
+    * Enables clean separation between startup hooks and runtime injection logic for advanced debugging workflows.
+
+* **Project-Based Configuration (ZAFrida Project)**
+    * Introduces the ZAFrida Project concept to persist devices, targets, scripts, attach scripts, and connection parameters as a complete working context.
+    * In the Project View, supports:
+        * `New Frida Project`
+        * `Select Frida Project`
+        * `Load Frida Project`
+    * UI state and configuration are automatically restored when switching projects.
+
+* **Smart Python / Frida Environment Resolution**
+    * Automatically detects the current PyCharm project’s Python SDK (venv / conda).
+    * Dynamically injects PATH to ensure the correct `frida` / `frida-tools` are used.
+    * Handles Remote and Gadget scenarios to avoid incorrect local environment injection.
+
+* **Developer Aids**
+    * One-click installation of `frida-gum.d.ts` for type hints and intelligent code completion in Frida JS.
 
 Use Cases
 -----------------------------------

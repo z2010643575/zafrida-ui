@@ -44,21 +44,59 @@ ZAFrida 并不替代 Frida，而是作为 `frida-tools` 的强大 UI 外壳，�
 功能特性
 -----------------------------------
 
-* **设备与进程管理**: 集成 `frida-ls-devices` 和 `frida-ps`，支持一键刷新设备列表，查看运行进程、正在运行的 App 或已安装的应用。
-* **多模式连接**: 完美支持 **USB**、**Remote** (远程主机)、**Gadget** 模式，支持自定义远程 Host 和 Port，无需繁琐的命令行参数。
-* **交互式脚本运行**:
-  * 支持 **Spawn** (`-f`) 和 **Attach** (`-p`/`-N`) 模式。
+* **设备与进程管理**  
+  集成 `frida-ls-devices` 与 `frida-ps`，支持一键刷新设备列表，查看运行进程、正在运行的 App 或已安装的应用。
+
+* **多模式连接**  
+  完整支持 **USB / Remote / Gadget** 模式，支持自定义远程 Host 与 Port，无需手工拼接复杂命令行参数。
+
+* **交互式脚本运行（Run / Attach）**
+  * 支持 **Run（默认 Spawn）** 与 **Attach** 两种执行动作，而非简单的“模式切换”。
   * 支持 **Force Stop** 强制停止目标应用。
-  * 内置控制台日志输出，并自动保存日志文件到项目目录 `zafrida-logs/`。
-* **动态模板系统 (核心创新)**:
-  * 提供 Android/iOS 常用 Hook 模板（如 SSL Pinning Bypass, Method Hook, Native Hook 等）。
-  * **复选框控制**: 勾选即生效（插入代码），取消勾选即失效（自动注释代码），无需删除代码。
-  * 支持自定义模板，支持从 IDE 编辑器实时预览。
-* **项目化配置**:
-  * 引入 "ZAFrida Project" 概念，将特定 APP 的 Hook 配置（包名、脚本路径、连接参数）保存为配置文件。
-  * 支持在 IDE 中快速创建和切换不同的 Frida 项目。
-* **智能环境解析**: 自动识别 PyCharm 当前项目的 Python 环境（venv/conda），确保调用正确的 `frida` 工具链。
-* **开发辅助**: 支持一键安装 `frida-gum.d.ts`，为 JS 脚本提供智能代码补全。
+  * 内置控制台日志输出，并自动保存日志到项目目录 `zafrida-logs/`。
+
+* **JS 编辑器右键菜单（重要）**
+  * 在 Frida JS 文件编辑区中右键，可直接选择：
+    * **Run Frida JS**：以当前 JS 文件作为主脚本执行（默认 Spawn）。
+    * **Attach Frida JS**：将当前 JS 文件作为附加脚本注入到已运行的目标进程。
+  * 执行前会自动保存当前文件，并自动切换到脚本所属的 ZAFrida Project。
+  * 适合快速 PoC、Demo 验证、Gadget 模式或已运行进程的即时注入。
+  * **快捷键**：
+    * Windows / Linux：`Ctrl + Alt + S`
+    * macOS：`⌘ + ⌥ + S`
+
+* **编辑器右键 Snippets 插入**
+  * 在 JS 编辑器右键菜单中提供 **ZAFrida Frida Snippets**。
+  * 一键插入常用 Frida 代码片段，例如：
+    * `Java.perform` 包裹结构
+    * Java 方法 Hook 模板
+    * `Interceptor.attach` Native Hook
+  * 插入过程遵循 IDE WriteCommandAction，可安全撤销/重做。
+
+* **动态模板系统（核心创新）**
+  * 内置 Android / iOS 常用 Hook 模板（如 SSL Pinning Bypass、Method Hook、Native Hook）。
+  * **复选框控制**：勾选即插入代码，取消勾选即自动注释代码，无需手动删改。
+  * 支持自定义模板，并可在 IDE 内实时预览模板代码。
+
+* **Run Script + Attach Script 分离设计**
+  * 支持主 **Run Script** 与独立 **Attach Script** 并存。
+  * 适合将“启动期 Hook”与“运行期注入逻辑”解耦，便于复杂调试与长期维护。
+
+* **项目化配置（ZAFrida Project）**
+  * 引入 ZAFrida Project 概念，将设备、目标、脚本、Attach Script、连接参数等作为一个完整工作上下文保存。
+  * 支持在 Project View 中：
+    * `New Frida Project` 创建新项目
+    * `Select Frida Project` 快速切换当前激活项目
+    * `Load Frida Project` 导入已有项目目录
+  * 切换项目后，UI 状态与配置会自动恢复。
+
+* **智能 Python / Frida 环境解析**
+  * 自动解析当前 PyCharm 项目的 Python SDK（venv / conda）。
+  * 动态注入 PATH，确保调用正确的 `frida` / `frida-tools`。
+  * 对 Remote / Gadget 场景进行兼容处理，避免误注入本地环境。
+
+* **开发辅助功能**
+  * 支持一键安装 `frida-gum.d.ts`，为 Frida JS 提供类型提示与智能补全。
 
 适用场景
 -----------------------------------
