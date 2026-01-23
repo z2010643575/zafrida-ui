@@ -7,13 +7,18 @@ import com.intellij.execution.configurations.GeneralCommandLine;
 import com.intellij.execution.process.CapturingProcessHandler;
 import com.intellij.execution.process.ProcessOutput;
 import com.intellij.icons.AllIcons;
+import com.intellij.ide.plugins.IdeaPluginDescriptor;
+import com.intellij.ide.plugins.PluginManagerCore;
 import com.intellij.openapi.options.ShowSettingsUtil;
 import com.intellij.openapi.ui.ComboBox;
 import com.intellij.openapi.ui.Messages;
 import com.intellij.openapi.vfs.LocalFileSystem;
 import com.intellij.openapi.vfs.VirtualFile;
+import com.intellij.openapi.extensions.PluginId;
 import com.intellij.util.SlowOperations;
+import com.intellij.openapi.util.JDOMUtil;
 import com.intellij.ui.components.JBTextField;
+import com.intellij.ui.components.ActionLink;
 import com.zafrida.ui.frida.*;
 import com.zafrida.ui.fridaproject.*;
 import com.zafrida.ui.fridaproject.ui.CreateZaFridaProjectDialog;
@@ -31,8 +36,12 @@ import com.zafrida.ui.util.ZaFridaIcons;
 import com.zafrida.ui.util.ZaFridaNotifier;
 import com.zafrida.ui.settings.ZaFridaSettingsService;
 import com.zafrida.ui.settings.ZaFridaSettingsState;
+import com.intellij.util.io.HttpRequests;
+import com.intellij.util.text.VersionComparatorUtil;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.jdom.Document;
+import org.jdom.Element;
 
 import javax.swing.JButton;
 import javax.swing.JLabel;
@@ -42,7 +51,10 @@ import java.awt.FlowLayout;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
+import java.awt.event.ActionListener;
+import java.io.ByteArrayInputStream;
 import java.io.File;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import com.intellij.openapi.util.text.StringUtil;
@@ -60,6 +72,10 @@ import com.intellij.openapi.util.text.StringUtil;
  * 刷新设备列表操作 {@link #reloadDevicesAsync()} 必须在后台线程执行，避免阻塞 EDT。
  */
 public final class ZaFridaRunPanel extends JPanel implements Disposable {
+
+    private static final String PLUGIN_ID = "com.zafrida.ui";
+    private static final String MARKETPLACE_PLUGIN_DETAILS_URL =
+            "https://plugins.jetbrains.com/plugins/list?pluginId=" + PLUGIN_ID;
 
     /** IDE 项目实例 */
     private final @NotNull Project project;
@@ -119,6 +135,11 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
     /** 日志文件路径提示标签 */
     private final JLabel logFileLabel = new JLabel("Log: (not started)");
 
+    /** 插件版本显示 */
+    private final JLabel versionValueLabel = new JLabel();
+    /** 更新提示链接 */
+    private final ActionLink updateLink = new ActionLink("Update available", (ActionListener) e -> openPluginUpdates());
+
     /** Run 脚本文件 */
     private @Nullable VirtualFile runScriptFile;
     /** Attach 脚本文件 */
@@ -126,6 +147,10 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
 
     /** 是否已输出工具链信息 */
     private boolean printedToolchainInfo = false;
+    /** 当前插件版本 */
+    private @Nullable String currentPluginVersion;
+    /** 是否已触发更新检查 */
+    private boolean updateCheckStarted = false;
 
     /** ZAFrida 项目管理器 */
     private final ZaFridaProjectManager fridaProjectManager;
@@ -223,7 +248,102 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
         forceStopBtn.setIcon(AllIcons.Actions.Cancel);
         openAppBtn.setIcon(AllIcons.Actions.Execute);
         clearConsoleBtn.setIcon(AllIcons.Actions.ClearCash);
+        initVersionInfo();
         updateRunningState();
+    }
+
+    /**
+     * 初始化插件版本与更新提示。
+     */
+    private void initVersionInfo() {
+        currentPluginVersion = resolveCurrentPluginVersion();
+        versionValueLabel.setText(currentPluginVersion != null ? currentPluginVersion : "unknown");
+        updateLink.setVisible(false);
+        updateLink.setIcon(AllIcons.General.Warning);
+        updateLink.setToolTipText("Open Plugins settings to update");
+        scheduleUpdateCheck();
+    }
+
+    /**
+     * 解析当前插件版本。
+     */
+    private @Nullable String resolveCurrentPluginVersion() {
+        IdeaPluginDescriptor descriptor = PluginManagerCore.getPlugin(PluginId.getId(PLUGIN_ID));
+        return descriptor != null ? descriptor.getVersion() : null;
+    }
+
+    /**
+     * 后台检查 Marketplace 是否有更新。
+     */
+    private void scheduleUpdateCheck() {
+        if (updateCheckStarted || currentPluginVersion == null) return;
+        updateCheckStarted = true;
+        ApplicationManager.getApplication().executeOnPooledThread(() -> {
+            String latestVersion = fetchMarketplaceLatestVersion();
+            if (latestVersion == null || currentPluginVersion == null) return;
+            boolean updateAvailable = VersionComparatorUtil.compare(latestVersion, currentPluginVersion) > 0;
+            if (!updateAvailable) return;
+            ApplicationManager.getApplication().invokeLater(() -> {
+                updateLink.setVisible(true);
+                updateLink.setToolTipText("Latest version: " + latestVersion);
+            });
+        });
+    }
+
+    /**
+     * 获取 Marketplace 最新版本号。
+     */
+    private @Nullable String fetchMarketplaceLatestVersion() {
+        try {
+            String xml = HttpRequests.request(MARKETPLACE_PLUGIN_DETAILS_URL)
+                    .userAgent("ZAFrida-UI")
+                    .connectTimeout(5_000)
+                    .readTimeout(5_000)
+                    .readString();
+            return parseMarketplaceLatestVersion(xml);
+        } catch (Throwable ignored) {
+            return null;
+        }
+    }
+
+    /**
+     * 解析 Marketplace XML 中的最新版本号。
+     */
+    private @Nullable String parseMarketplaceLatestVersion(@NotNull String xml) {
+        if (StringUtil.isEmptyOrSpaces(xml)) return null;
+        try {
+            Document doc = JDOMUtil.loadDocument(new ByteArrayInputStream(xml.getBytes(StandardCharsets.UTF_8)));
+            Element root = doc.getRootElement();
+            if (root == null) return null;
+            List<Element> pluginElements = new ArrayList<>();
+            collectElementsByName(root, "idea-plugin", pluginElements);
+            String best = null;
+            for (Element plugin : pluginElements) {
+                String id = plugin.getChildTextTrim("id");
+                if (!PLUGIN_ID.equals(id)) {
+                    continue;
+                }
+                String version = plugin.getChildTextTrim("version");
+                if (StringUtil.isEmptyOrSpaces(version)) continue;
+                if (best == null || VersionComparatorUtil.compare(version, best) > 0) {
+                    best = version;
+                }
+            }
+            return best;
+        } catch (Throwable ignored) {
+            return null;
+        }
+    }
+
+    private static void collectElementsByName(@NotNull Element element,
+                                              @NotNull String name,
+                                              @NotNull List<Element> out) {
+        if (name.equals(element.getName())) {
+            out.add(element);
+        }
+        for (Element child : element.getChildren()) {
+            collectElementsByName(child, name, out);
+        }
     }
 
     /**
@@ -234,6 +354,8 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
         JPanel row = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
         row.add(fridaProjectSelector);
         row.add(projectTypeIcon);
+        row.add(versionValueLabel);
+        row.add(updateLink);
         return row;
     }
 
@@ -580,6 +702,15 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
     private void openGlobalSettings() {
         SlowOperations.allowSlowOperations(() ->
                 ShowSettingsUtil.getInstance().showSettingsDialog(project, "ZAFrida")
+        );
+    }
+
+    /**
+     * 打开插件更新设置。
+     */
+    private void openPluginUpdates() {
+        SlowOperations.allowSlowOperations(() ->
+                ShowSettingsUtil.getInstance().showSettingsDialog(project, "Plugins")
         );
     }
 
