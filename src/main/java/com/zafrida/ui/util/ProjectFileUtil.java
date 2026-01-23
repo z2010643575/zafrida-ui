@@ -35,20 +35,31 @@ public final class ProjectFileUtil {
     /**
      * 弹出文件选择器选择 JS 脚本。
      * @param project 当前 IDE 项目
+     * @param initialSelection 初始选中（可为空，文件或目录）
      * @return 选择的文件或 null
      */
-    public static @Nullable VirtualFile chooseJavaScriptFile(@NotNull Project project) {
+    public static @Nullable VirtualFile chooseJavaScriptFile(@NotNull Project project,
+                                                             @Nullable VirtualFile initialSelection) {
         FileChooserDescriptor descriptor = FileChooserDescriptorFactory.createSingleFileDescriptor("js");
         descriptor.setTitle("Select Frida JS Script");
         descriptor.setDescription("Select a JavaScript file inside your project");
 
-        return FileChooser.chooseFile(descriptor, project, null);
+        return FileChooser.chooseFile(descriptor, project, initialSelection);
+    }
+
+    /**
+     * 弹出文件选择器选择 JS 脚本。
+     * @param project 当前 IDE 项目
+     * @return 选择的文件或 null
+     */
+    public static @Nullable VirtualFile chooseJavaScriptFile(@NotNull Project project) {
+        return chooseJavaScriptFile(project, null);
     }
 
     /**
      * 在项目内弹出文件选择器选择 JS 脚本。
      * @param project 当前 IDE 项目
-     * @param initialDir 初始目录（可为空）
+     * @param initialDir 初始选中（可为空，文件或目录）
      * @return 选择的文件或 null
      */
     public static @Nullable VirtualFile chooseJavaScriptFileInProject(@NotNull Project project,
@@ -63,7 +74,7 @@ public final class ProjectFileUtil {
             descriptor.setRoots(base);
         }
 
-        VirtualFile start = initialDir != null ? initialDir : base;
+        VirtualFile start = (initialDir != null && initialDir.isValid()) ? initialDir : base;
         return FileChooser.chooseFile(descriptor, project, start);
     }
 

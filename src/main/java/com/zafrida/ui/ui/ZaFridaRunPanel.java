@@ -2,8 +2,6 @@ package com.zafrida.ui.ui;
 
 import com.intellij.openapi.Disposable;
 import com.intellij.openapi.application.ApplicationManager;
-import com.intellij.openapi.fileChooser.FileChooser;
-import com.intellij.openapi.fileChooser.FileChooserDescriptor;
 import com.intellij.openapi.project.Project;
 import com.intellij.execution.configurations.GeneralCommandLine;
 import com.intellij.execution.process.CapturingProcessHandler;
@@ -295,7 +293,8 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
 
         chooseRunScriptBtn.addActionListener(e -> {
             ZaFridaFridaProject active = fridaProjectManager.getActiveProject();
-            VirtualFile initial = active != null ? fridaProjectManager.resolveProjectDir(active) : null;
+            VirtualFile projectDir = active != null ? fridaProjectManager.resolveProjectDir(active) : null;
+            VirtualFile initial = resolveInitialScriptSelection(runScriptFile, runScriptField.getText(), projectDir);
             VirtualFile file = chooseRunScriptFile(initial);
             if (file == null) return;
 
@@ -309,7 +308,8 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
 
         chooseAttachScriptBtn.addActionListener(e -> {
             ZaFridaFridaProject active = fridaProjectManager.getActiveProject();
-            VirtualFile initial = active != null ? fridaProjectManager.resolveProjectDir(active) : null;
+            VirtualFile projectDir = active != null ? fridaProjectManager.resolveProjectDir(active) : null;
+            VirtualFile initial = resolveInitialScriptSelection(attachScriptFile, attachScriptField.getText(), projectDir);
             VirtualFile file = chooseAttachScriptFile(initial);
             if (file == null) return;
 
@@ -467,24 +467,17 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
 
     /**
      * 选择 Run 脚本文件。
-     * @param initialDir 初始目录
+     * @param initialSelection 初始选中（文件或目录）
      * @return 脚本文件或 null
      */
-    private @Nullable VirtualFile chooseRunScriptFile(@Nullable VirtualFile initialDir) {
+    private @Nullable VirtualFile chooseRunScriptFile(@Nullable VirtualFile initialSelection) {
         ZaFridaSettingsState st = ApplicationManager.getApplication()
                 .getService(ZaFridaSettingsService.class)
                 .getState();
         if (st.useIdeScriptChooser) {
-            return ProjectFileUtil.chooseJavaScriptFileInProject(project, initialDir);
+            return ProjectFileUtil.chooseJavaScriptFileInProject(project, initialSelection);
         }
-
-        if (initialDir != null) {
-            FileChooserDescriptor d = new FileChooserDescriptor(true, false, false, false, false, false);
-            d.withFileFilter(vf -> "js".equalsIgnoreCase(vf.getExtension()));
-            VirtualFile picked = FileChooser.chooseFile(d, project, initialDir);
-            if (picked != null) return picked;
-        }
-        return ProjectFileUtil.chooseJavaScriptFile(project);
+        return ProjectFileUtil.chooseJavaScriptFile(project, initialSelection);
     }
 
     /**
@@ -492,8 +485,49 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
      * @param initialDir 初始目录
      * @return 脚本文件或 null
      */
-    private @Nullable VirtualFile chooseAttachScriptFile(@Nullable VirtualFile initialDir) {
-        return chooseRunScriptFile(initialDir);
+    private @Nullable VirtualFile chooseAttachScriptFile(@Nullable VirtualFile initialSelection) {
+        return chooseRunScriptFile(initialSelection);
+    }
+
+    /**
+     * 解析文件选择器的初始选中项。
+     * @param cachedFile 已缓存的脚本文件
+     * @param pathText 输入框中的路径文本
+     * @param fallbackDir 兜底目录
+     * @return 初始选中（文件或目录）
+     */
+    private @Nullable VirtualFile resolveInitialScriptSelection(@Nullable VirtualFile cachedFile,
+                                                                @Nullable String pathText,
+                                                                @Nullable VirtualFile fallbackDir) {
+        if (cachedFile != null && cachedFile.isValid()) {
+            return cachedFile;
+        }
+        VirtualFile fromPath = resolveVirtualFileFromText(pathText);
+        if (fromPath != null) {
+            return fromPath;
+        }
+        if (fallbackDir != null && fallbackDir.isValid()) {
+            return fallbackDir;
+        }
+        return null;
+    }
+
+    /**
+     * 从路径文本解析文件或其父目录。
+     * @param pathText 路径文本
+     * @return 文件或目录
+     */
+    private @Nullable VirtualFile resolveVirtualFileFromText(@Nullable String pathText) {
+        if (StringUtil.isEmptyOrSpaces(pathText)) return null;
+        String path = pathText.trim();
+        VirtualFile file = LocalFileSystem.getInstance().findFileByPath(path);
+        if (file != null && file.isValid()) {
+            return file;
+        }
+        String parentPath = new File(path).getParent();
+        if (parentPath == null || parentPath.isEmpty()) return null;
+        VirtualFile parent = LocalFileSystem.getInstance().findFileByPath(parentPath);
+        return parent != null && parent.isValid() ? parent : null;
     }
 
     /**
