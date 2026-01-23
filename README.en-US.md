@@ -108,7 +108,7 @@ Technical Architecture
 -----------------------------------
 
 #### Development Environment
-- Language: Java 21, Kotlin
+- Language: Language: Java 21 (production source). Build scripts use Gradle Kotlin DSL.
 - Framework: IntelliJ Platform SDK
 - Build Tool: Gradle
 - Dependency: `frida` `frida-tools` (Python environment)

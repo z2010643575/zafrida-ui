@@ -108,7 +108,7 @@ ZAFrida UI 适用于所有使用 Frida 进行逆向工程的场景，特别是�
 -----------------------------------
 
 #### 开发环境
-- 语言: Java 21, Java
+- 语言: Java 21, Java, 构建脚本使用 Gradle Kotlin DSL
 - 框架: IntelliJ Platform SDK
 - 构建工具: Gradle
 - 依赖: `frida` `frida-tools` (Python environment)

@@ -81,6 +81,7 @@ public final class ProjectPythonEnvResolver {
     }
 
     /**
+     * 尝试在当前 Project 中查找关联的 Python SDK。
      * In PyCharm, the Python interpreter is often stored as Module SDK rather than Project SDK.
      * 在 PyCharm 中，Python 解释器经常挂载在 Module SDK 而非 Project SDK。
      * So we try:
@@ -89,9 +90,6 @@ public final class ProjectPythonEnvResolver {
      * 1) Project SDK（项目级）
      * 2) Each Module SDK
      * 2) 各 Module SDK
-     */
-    /**
-     * 尝试在当前 Project 中查找关联的 Python SDK。
      * <p>
      * 优先检查 Project SDK，然后遍历所有 Module 的 SDK。
      *
@@ -264,14 +262,11 @@ public final class ProjectPythonEnvResolver {
     }
 
     /**
+     * 尝试在给定的 Python 环境中查找指定的工具脚本。
      * Try to locate a console script in the resolved python env.
      * 尝试在解析出的 Python 环境中定位控制台脚本。
      * Returns absolute path if found; otherwise null.
      * 如果找到则返回绝对路径，否则返回 null。
-     */
-    /**
-     * 尝试在给定的 Python 环境中查找指定的工具脚本。
-     *
      * @param env      Python 环境信息，非空
      * @param baseName 工具脚本的基本名称（不含扩展名），非空
      * @return 如果找到则返回工具脚本的绝对路径，否则返回 null
