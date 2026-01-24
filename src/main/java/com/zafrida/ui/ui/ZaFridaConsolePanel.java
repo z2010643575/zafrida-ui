@@ -12,6 +12,7 @@ import com.intellij.openapi.editor.Document;
 import com.intellij.openapi.editor.Editor;
 import com.intellij.openapi.editor.ScrollType;
 import com.intellij.ui.SearchTextField;
+import com.zafrida.ui.util.ZaStrUtil;
 
 import javax.swing.JButton;
 import javax.swing.JPanel;
@@ -116,7 +117,7 @@ public final class ZaFridaConsolePanel extends JPanel implements Disposable {
      */
     private void findNext(boolean forward) {
         String query = searchField.getText();
-        if (query.isBlank()) {
+        if (ZaStrUtil.isBlank(query)) {
             return;
         }
         Editor editor = getEditor();

@@ -4,6 +4,7 @@ import com.intellij.execution.configurations.GeneralCommandLine;
 import com.intellij.execution.process.CapturingProcessHandler;
 import com.intellij.execution.process.ProcessOutput;
 import com.intellij.openapi.application.ApplicationManager;
+import com.zafrida.ui.util.ZaStrUtil;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -46,10 +47,10 @@ public final class AdbService {
             } else {
                 info.accept("[ZAFrida] ADB forward ready on port " + port);
             }
-            if (!result.stdout.isBlank()) {
+            if (ZaStrUtil.isNotBlank(result.stdout)) {
                 info.accept("[ZAFrida] " + result.stdout);
             }
-            if (!result.stderr.isBlank()) {
+            if (ZaStrUtil.isNotBlank(result.stderr)) {
                 warn.accept("[ZAFrida] " + result.stderr);
             }
             onDone.run();
@@ -76,12 +77,12 @@ public final class AdbService {
         runAsync(cmd, result -> {
             if (result.exitCode == 0) {
                 info.accept("[ZAFrida] Force stopped: " + packageName);
-                if (!result.stdout.isBlank()) {
+                if (ZaStrUtil.isNotBlank(result.stdout)) {
                     info.accept(result.stdout);
                 }
             } else {
-                String detail = !result.stderr.isBlank() ? result.stderr : result.stdout;
-                if (detail.isBlank()) detail = "unknown error";
+                String detail = ZaStrUtil.isNotBlank(result.stderr) ? result.stderr : result.stdout;
+                if (ZaStrUtil.isBlank(detail)) detail = "unknown error";
                 error.accept("[ZAFrida] Force stop failed (exit=" + result.exitCode + "): " + detail);
             }
         }, throwable -> error.accept("[ZAFrida] Force stop failed: " + throwable.getMessage()));
@@ -104,12 +105,12 @@ public final class AdbService {
         runAsync(cmd, result -> {
             if (result.exitCode == 0) {
                 info.accept("[ZAFrida] Opened app: " + packageName);
-                if (!result.stdout.isBlank()) {
+                if (ZaStrUtil.isNotBlank(result.stdout)) {
                     info.accept(result.stdout);
                 }
             } else {
-                String detail = !result.stderr.isBlank() ? result.stderr : result.stdout;
-                if (detail.isBlank()) detail = "unknown error";
+                String detail = ZaStrUtil.isNotBlank(result.stderr) ? result.stderr : result.stdout;
+                if (ZaStrUtil.isBlank(detail)) detail = "unknown error";
                 error.accept("[ZAFrida] Open app failed (exit=" + result.exitCode + "): " + detail);
             }
         }, throwable -> error.accept("[ZAFrida] Open app failed: " + throwable.getMessage()));
@@ -149,7 +150,7 @@ public final class AdbService {
     private static @NotNull List<String> baseAdbArgs(@Nullable String deviceId) {
         List<String> args = new ArrayList<>();
         args.add("adb");
-        if (deviceId != null && !deviceId.isBlank()) {
+        if (ZaStrUtil.isNotBlank(deviceId)) {
             args.add("-s");
             args.add(deviceId);
         }

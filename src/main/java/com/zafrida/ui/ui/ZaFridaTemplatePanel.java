@@ -30,6 +30,7 @@ import com.zafrida.ui.fridaproject.ZaFridaPlatform;
 import com.zafrida.ui.templates.ZaFridaTemplate;
 import com.zafrida.ui.templates.ZaFridaTemplateCategory;
 import com.zafrida.ui.templates.ZaFridaTemplateService;
+import com.zafrida.ui.util.ZaStrUtil;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -446,9 +447,10 @@ public final class ZaFridaTemplatePanel extends JPanel implements Disposable {
                         int commentedLines = 0;
                         int totalLines = 0;
                         for (String line : lines) {
-                            if (!line.trim().isEmpty()) {
+                            String trimmed = line.trim();
+                            if (ZaStrUtil.isNotBlank(trimmed)) {
                                 totalLines++;
-                                if (line.trim().startsWith("//")) {
+                                if (trimmed.startsWith("//")) {
                                     commentedLines++;
                                 }
                             }

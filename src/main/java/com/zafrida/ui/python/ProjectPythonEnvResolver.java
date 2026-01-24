@@ -6,6 +6,7 @@ import com.intellij.openapi.project.Project;
 import com.intellij.openapi.projectRoots.Sdk;
 import com.intellij.openapi.roots.ProjectRootManager;
 import com.intellij.openapi.util.SystemInfoRt;
+import com.zafrida.ui.util.ZaStrUtil;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -58,7 +59,7 @@ public final class ProjectPythonEnvResolver {
             if (sdk == null) return null;
 
             String homePath = sdk.getHomePath();
-            if (homePath == null || homePath.trim().isEmpty()) return null;
+            if (ZaStrUtil.isBlank(homePath)) return null;
 
             // Some remote SDKs provide non-local paths (ssh://, docker://, etc.).
             // 某些远程 SDK 会返回非本地路径（如 ssh://、docker:// 等）。
@@ -114,7 +115,7 @@ public final class ProjectPythonEnvResolver {
 
         // fallback: if projectSdk exists but doesn't look like python (rare in PyCharm), still return it
         // 回退：若 Project SDK 存在但不太像 Python（PyCharm 里很少见），仍返回它
-        if (projectSdk != null && projectSdk.getHomePath() != null && !projectSdk.getHomePath().isBlank()) {
+        if (projectSdk != null && ZaStrUtil.isNotBlank(projectSdk.getHomePath())) {
             return projectSdk;
         }
 
@@ -122,7 +123,7 @@ public final class ProjectPythonEnvResolver {
         // 回退：返回第一个非空的 Module SDK
         for (Module m : modules) {
             Sdk moduleSdk = ModuleRootManager.getInstance(m).getSdk();
-            if (moduleSdk != null && moduleSdk.getHomePath() != null && !moduleSdk.getHomePath().isBlank()) {
+            if (moduleSdk != null && ZaStrUtil.isNotBlank(moduleSdk.getHomePath())) {
                 return moduleSdk;
             }
         }
@@ -140,7 +141,7 @@ public final class ProjectPythonEnvResolver {
         if (sdk == null) return false;
 
         String home = sdk.getHomePath();
-        if (home == null || home.isBlank()) return false;
+        if (ZaStrUtil.isBlank(home)) return false;
 
         // Prefer SDK type name when available
         // 优先使用 SDK 类型名称进行判断
@@ -367,12 +368,12 @@ public final class ProjectPythonEnvResolver {
         StringBuilder sb = new StringBuilder();
 
         for (String p : prepend) {
-            if (p == null || p.isBlank()) continue;
+            if (ZaStrUtil.isBlank(p)) continue;
             if (sb.length() > 0) sb.append(sep);
             sb.append(p);
         }
 
-        if (original != null && !original.isBlank()) {
+        if (ZaStrUtil.isNotBlank(original)) {
             if (sb.length() > 0) sb.append(sep);
             sb.append(original);
         }

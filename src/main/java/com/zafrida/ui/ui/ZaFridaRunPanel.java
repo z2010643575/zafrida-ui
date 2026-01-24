@@ -34,6 +34,7 @@ import com.zafrida.ui.util.ZaFridaNetUtil;
 import com.zafrida.ui.util.ZaFridaIcons;
 import com.zafrida.ui.util.ZaFridaNotifier;
 import com.zafrida.ui.util.ZaFridaTextUtil;
+import com.zafrida.ui.util.ZaStrUtil;
 import com.zafrida.ui.settings.ZaFridaSettingsService;
 import com.zafrida.ui.settings.ZaFridaSettingsState;
 import com.intellij.util.io.HttpRequests;
@@ -57,7 +58,6 @@ import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
-import com.intellij.openapi.util.text.StringUtil;
 
 /**
  * [UI组件] 运行控制主面板。
@@ -313,7 +313,7 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
      * 解析 Marketplace XML 中的最新版本号。
      */
     private @Nullable String parseMarketplaceLatestVersion(@NotNull String xml) {
-        if (StringUtil.isEmptyOrSpaces(xml)) return null;
+        if (ZaStrUtil.isBlank(xml)) return null;
         try {
             Document doc = JDOMUtil.loadDocument(new ByteArrayInputStream(xml.getBytes(StandardCharsets.UTF_8)));
             Element root = doc.getRootElement();
@@ -327,7 +327,7 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
                     continue;
                 }
                 String version = plugin.getChildTextTrim("version");
-                if (StringUtil.isEmptyOrSpaces(version)) continue;
+                if (ZaStrUtil.isBlank(version)) continue;
                 if (best == null || VersionComparatorUtil.compare(version, best) > 0) {
                     best = version;
                 }
@@ -525,7 +525,7 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
         }
 
         // 1) 恢复 lastTarget（由设置页保存）
-        if (!StringUtil.isEmptyOrSpaces(cfg.lastTarget)) {
+        if (ZaStrUtil.isNotBlank(cfg.lastTarget)) {
             targetField.setText(cfg.lastTarget);
         }
 
@@ -535,7 +535,7 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
         VirtualFile dir = fridaProjectManager.resolveProjectDir(active);
         if (dir != null) {
             String rel = cfg.mainScript;
-            if (!StringUtil.isEmptyOrSpaces(rel)) {
+            if (ZaStrUtil.isNotBlank(rel)) {
                 final VirtualFile[] fRef = new VirtualFile[1];
                 SlowOperations.allowSlowOperations(() -> fRef[0] = dir.findFileByRelativePath(rel));
                 VirtualFile f = fRef[0];
@@ -547,7 +547,7 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
                 }
             }
             String attachRel = cfg.attachScript;
-            if (!StringUtil.isEmptyOrSpaces(attachRel)) {
+            if (ZaStrUtil.isNotBlank(attachRel)) {
                 final VirtualFile[] attachRef = new VirtualFile[1];
                 SlowOperations.allowSlowOperations(() -> attachRef[0] = dir.findFileByRelativePath(attachRel));
                 VirtualFile f = attachRef[0];
@@ -643,7 +643,7 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
      * @return 文件或目录
      */
     private @Nullable VirtualFile resolveVirtualFileFromText(@Nullable String pathText) {
-        if (StringUtil.isEmptyOrSpaces(pathText)) return null;
+        if (ZaStrUtil.isBlank(pathText)) return null;
         String path = pathText.trim();
         VirtualFile file = LocalFileSystem.getInstance().findFileByPath(path);
         if (file != null && file.isValid()) {
@@ -964,7 +964,7 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
         String path = runScriptField.getText();
         VirtualFile file = resolveRunScriptFileForLocate();
         if (file == null || !file.isValid() || file.isDirectory()) {
-            if (StringUtil.isEmptyOrSpaces(path)) {
+            if (ZaStrUtil.isBlank(path)) {
                 ZaFridaNotifier.warn(project, "ZAFrida", "No script file selected");
             } else {
                 ZaFridaNotifier.warn(project, "ZAFrida", "Script file not found: " + path.trim());
@@ -981,7 +981,7 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
         String path = attachScriptField.getText();
         VirtualFile file = resolveAttachScriptFileForLocate();
         if (file == null || !file.isValid() || file.isDirectory()) {
-            if (StringUtil.isEmptyOrSpaces(path)) {
+            if (ZaStrUtil.isBlank(path)) {
                 ZaFridaNotifier.warn(project, "ZAFrida", "No attach script file selected");
             } else {
                 ZaFridaNotifier.warn(project, "ZAFrida", "Attach script file not found: " + path.trim());
@@ -1004,7 +1004,7 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
             return templateFile;
         }
         String path = runScriptField.getText();
-        if (StringUtil.isEmptyOrSpaces(path)) return null;
+        if (ZaStrUtil.isBlank(path)) return null;
         return LocalFileSystem.getInstance().findFileByPath(path.trim());
     }
 
@@ -1017,7 +1017,7 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
             return attachScriptFile;
         }
         String path = attachScriptField.getText();
-        if (StringUtil.isEmptyOrSpaces(path)) return null;
+        if (ZaStrUtil.isBlank(path)) return null;
         return LocalFileSystem.getInstance().findFileByPath(path.trim());
     }
 
@@ -1142,9 +1142,9 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
                 match = findDeviceByHost(devices, host);
             }
             if (match == null) {
-                if (!StringUtil.isEmptyOrSpaces(cfg.lastDeviceHost)) {
+                if (ZaStrUtil.isNotBlank(cfg.lastDeviceHost)) {
                     match = findDeviceByHost(devices, cfg.lastDeviceHost);
-                } else if (!StringUtil.isEmptyOrSpaces(cfg.lastDeviceId)) {
+                } else if (ZaStrUtil.isNotBlank(cfg.lastDeviceId)) {
                     match = findDeviceById(devices, cfg.lastDeviceId);
                 }
             }
@@ -1213,7 +1213,7 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
      * @return 主机地址
      */
     private @NotNull String resolveRemoteHost(@Nullable ZaFridaProjectConfig cfg) {
-        if (cfg != null && !StringUtil.isEmptyOrSpaces(cfg.remoteHost)) {
+        if (cfg != null && ZaStrUtil.isNotBlank(cfg.remoteHost)) {
             return cfg.remoteHost.trim();
         }
         ZaFridaSettingsState st = ApplicationManager.getApplication()
@@ -1423,7 +1423,7 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
         if (script == null && active != null) {
             ZaFridaProjectConfig pc = fridaProjectManager.loadProjectConfig(active);
             VirtualFile dir = fridaProjectManager.resolveProjectDir(active);
-            if (dir != null && pc != null && !StringUtil.isEmptyOrSpaces(pc.mainScript)) {
+            if (dir != null && pc != null && ZaStrUtil.isNotBlank(pc.mainScript)) {
                 VirtualFile cand = dir.findFileByRelativePath(pc.mainScript);
                 if (cand != null && !cand.isDirectory()) {
                     setRunScriptFile(cand);
@@ -1452,7 +1452,7 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
         if (script == null && active != null) {
             ZaFridaProjectConfig pc = fridaProjectManager.loadProjectConfig(active);
             VirtualFile dir = fridaProjectManager.resolveProjectDir(active);
-            if (dir != null && pc != null && !StringUtil.isEmptyOrSpaces(pc.attachScript)) {
+            if (dir != null && pc != null && ZaStrUtil.isNotBlank(pc.attachScript)) {
                 VirtualFile cand = dir.findFileByRelativePath(pc.attachScript);
                 if (cand != null && !cand.isDirectory()) {
                     setAttachScriptFile(cand);
@@ -1516,7 +1516,7 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
         ZaFridaFridaProject active = fridaProjectManager.getActiveProject();
         ZaFridaProjectConfig projectConfig = active != null ? fridaProjectManager.loadProjectConfig(active) : null;
         String packageName = resolveForceStopPackage(projectConfig);
-        if (StringUtil.isEmptyOrSpaces(packageName)) {
+        if (ZaStrUtil.isBlank(packageName)) {
             ZaFridaNotifier.warn(project, "ZAFrida", "Force stop requires a package name");
             runConsolePanel.warn("[ZAFrida] Force stop requires a package name.");
             return;
@@ -1526,7 +1526,7 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
         String deviceId = null;
         if (selected != null && selected.getMode() == FridaDeviceMode.DEVICE_ID) {
             String id = selected.getId();
-            if (!StringUtil.isEmptyOrSpaces(id) && !"usb".equalsIgnoreCase(id)) {
+            if (ZaStrUtil.isNotBlank(id) && !"usb".equalsIgnoreCase(id)) {
                 deviceId = id;
             }
         }
@@ -1540,7 +1540,7 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
         ZaFridaFridaProject active = fridaProjectManager.getActiveProject();
         ZaFridaProjectConfig projectConfig = active != null ? fridaProjectManager.loadProjectConfig(active) : null;
         String packageName = resolveForceStopPackage(projectConfig);
-        if (StringUtil.isEmptyOrSpaces(packageName)) {
+        if (ZaStrUtil.isBlank(packageName)) {
             ZaFridaNotifier.warn(project, "ZAFrida", "Open app requires a package name");
             runConsolePanel.warn("[ZAFrida] Open app requires a package name.");
             return;
@@ -1550,7 +1550,7 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
         String deviceId = null;
         if (selected != null && selected.getMode() == FridaDeviceMode.DEVICE_ID) {
             String id = selected.getId();
-            if (!StringUtil.isEmptyOrSpaces(id) && !"usb".equalsIgnoreCase(id)) {
+            if (ZaStrUtil.isNotBlank(id) && !"usb".equalsIgnoreCase(id)) {
                 deviceId = id;
             }
         }
@@ -1568,7 +1568,7 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
         if (!target.isEmpty()) {
             if (!ZaFridaTextUtil.isNumeric(target)) return target;
         }
-        if (cfg != null && !StringUtil.isEmptyOrSpaces(cfg.lastTarget)) {
+        if (cfg != null && ZaStrUtil.isNotBlank(cfg.lastTarget)) {
             return cfg.lastTarget.trim();
         }
         return null;

@@ -20,6 +20,7 @@ import com.zafrida.ui.settings.ZaFridaSettingsService;
 import com.zafrida.ui.settings.ZaFridaSettingsState;
 import com.zafrida.ui.util.ZaFridaIcons;
 import com.zafrida.ui.util.ZaFridaNetUtil;
+import com.zafrida.ui.util.ZaStrUtil;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -285,7 +286,7 @@ public final class ZaFridaProjectSettingsDialog extends DialogWrapper {
         ZaFridaSettingsState st = ApplicationManager.getApplication()
                 .getService(ZaFridaSettingsService.class)
                 .getState();
-        String host = !isBlank(cfg.remoteHost) ? cfg.remoteHost : ZaFridaNetUtil.normalizeHost(st.defaultRemoteHost);
+        String host = ZaStrUtil.isNotBlank(cfg.remoteHost) ? cfg.remoteHost : ZaFridaNetUtil.normalizeHost(st.defaultRemoteHost);
         if (host.isEmpty()) host = ZaFridaNetUtil.LOOPBACK_HOST;
         int port = cfg.remotePort > 0 ? cfg.remotePort : ZaFridaNetUtil.defaultPort(st.defaultRemotePort);
         remoteHostField.setText(host);
@@ -343,7 +344,7 @@ public final class ZaFridaProjectSettingsDialog extends DialogWrapper {
                     targetCombo.removeAllItems();
                     for (FridaProcess p : processes) {
                         String label = targetLabel(p);
-                        if (label != null && !label.isBlank()) {
+                        if (ZaStrUtil.isNotBlank(label)) {
                             targetCombo.addItem(label);
                         }
                     }
@@ -402,7 +403,7 @@ public final class ZaFridaProjectSettingsDialog extends DialogWrapper {
      */
     private void setTargetText(@Nullable String value) {
         manualTargetField.setText(value == null ? "" : value.trim());
-        if (value == null || value.isBlank()) {
+        if (ZaStrUtil.isBlank(value)) {
             targetCombo.setSelectedItem(null);
             return;
         }
@@ -449,10 +450,10 @@ public final class ZaFridaProjectSettingsDialog extends DialogWrapper {
 
         if (activeProject != null) {
             ZaFridaProjectConfig cfg = projectManager.loadProjectConfig(activeProject);
-            if (!isBlank(cfg.lastDeviceHost)) {
+            if (ZaStrUtil.isNotBlank(cfg.lastDeviceHost)) {
                 return new FridaDevice("remote:" + cfg.lastDeviceHost, "remote", "Remote", FridaDeviceMode.HOST, cfg.lastDeviceHost);
             }
-            if (!isBlank(cfg.lastDeviceId)) {
+            if (ZaStrUtil.isNotBlank(cfg.lastDeviceId)) {
                 return new FridaDevice(cfg.lastDeviceId, "device", cfg.lastDeviceId, FridaDeviceMode.DEVICE_ID, null);
             }
         }
@@ -477,21 +478,12 @@ public final class ZaFridaProjectSettingsDialog extends DialogWrapper {
     }
 
     /**
-     * 判断字符串是否为空或仅空白。
-     * @param value 输入字符串
-     * @return true 表示为空
-     */
-    private static boolean isBlank(@Nullable String value) {
-        return value == null || value.trim().isEmpty();
-    }
-
-    /**
      * 解析端口文本。
      * @param portText 端口文本
      * @return 端口值或 0
      */
     private static int parsePort(@Nullable String portText) {
-        if (portText == null || portText.trim().isEmpty()) return 0;
+        if (ZaStrUtil.isBlank(portText)) return 0;
         try {
             return Integer.parseInt(portText.trim());
         } catch (NumberFormatException e) {
@@ -525,10 +517,10 @@ public final class ZaFridaProjectSettingsDialog extends DialogWrapper {
      * @return 显示文本或 null
      */
     private static @Nullable String targetLabel(@NotNull FridaProcess p) {
-        if (p.getIdentifier() != null && !p.getIdentifier().isBlank()) {
+        if (ZaStrUtil.isNotBlank(p.getIdentifier())) {
             return p.getIdentifier();
         }
-        if (p.getName() != null && !p.getName().isBlank()) {
+        if (ZaStrUtil.isNotBlank(p.getName())) {
             return p.getName();
         }
         return null;

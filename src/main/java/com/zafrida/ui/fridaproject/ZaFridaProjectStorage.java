@@ -8,6 +8,7 @@ import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.util.SlowOperations;
 import com.zafrida.ui.frida.FridaConnectionMode;
 import com.zafrida.ui.frida.FridaProcessScope;
+import com.zafrida.ui.util.ZaStrUtil;
 import org.jdom.Document;
 import org.jdom.Element;
 import org.jdom.input.SAXBuilder;
@@ -190,7 +191,7 @@ public final class ZaFridaProjectStorage {
         cfg.name = root.getAttributeValue("name", "");
         cfg.platform = ZaFridaPlatform.valueOf(root.getAttributeValue("platform", "ANDROID"));
         String mainScriptAttr = root.getAttributeValue("mainScript");
-        if (mainScriptAttr == null || mainScriptAttr.isBlank()) {
+        if (ZaStrUtil.isBlank(mainScriptAttr)) {
             cfg.mainScript = ZaFridaProjectFiles.defaultMainScriptName(cfg.name);
         } else {
             cfg.mainScript = mainScriptAttr;
@@ -250,7 +251,7 @@ public final class ZaFridaProjectStorage {
      * @return 解析结果
      */
     private static int parseInt(@Nullable String value, int fallback) {
-        if (value == null || value.isBlank()) return fallback;
+        if (ZaStrUtil.isBlank(value)) return fallback;
         try {
             return Integer.parseInt(value.trim());
         } catch (NumberFormatException e) {

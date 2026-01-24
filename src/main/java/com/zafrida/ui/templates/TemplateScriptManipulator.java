@@ -1,6 +1,7 @@
 package com.zafrida.ui.templates;
 
 import com.intellij.openapi.editor.Document;
+import com.zafrida.ui.util.ZaStrUtil;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -195,7 +196,7 @@ public final class TemplateScriptManipulator {
     private static @Nullable Integer findFirstNonEmptyLine(@NotNull Document document, int from, int to) {
         if (from > to) return null;
         for (int i = from; i <= to; i++) {
-            if (!getLineText(document, i).trim().isEmpty()) return i;
+            if (ZaStrUtil.isNotBlank(getLineText(document, i))) return i;
         }
         return null;
     }
@@ -210,7 +211,7 @@ public final class TemplateScriptManipulator {
     private static @Nullable Integer findLastNonEmptyLine(@NotNull Document document, int from, int to) {
         if (from > to) return null;
         for (int i = to; i >= from; i--) {
-            if (!getLineText(document, i).trim().isEmpty()) return i;
+            if (ZaStrUtil.isNotBlank(getLineText(document, i))) return i;
         }
         return null;
     }

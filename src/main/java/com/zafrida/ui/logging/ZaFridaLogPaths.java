@@ -2,6 +2,7 @@ package com.zafrida.ui.logging;
 
 import com.intellij.openapi.application.ApplicationManager;
 import com.zafrida.ui.settings.ZaFridaSettingsService;
+import com.zafrida.ui.util.ZaStrUtil;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -33,7 +34,7 @@ public final class ZaFridaLogPaths {
     public static @Nullable Path ensureLogsDir(@NotNull String basePath) {
         ZaFridaSettingsService settings = ApplicationManager.getApplication().getService(ZaFridaSettingsService.class);
         String dirName = settings.getState().logsDirName;
-        if (dirName == null || dirName.isBlank()) dirName = "zafrida-logs";
+        if (ZaStrUtil.isBlank(dirName)) dirName = "zafrida-logs";
         try {
             Path dir = Paths.get(basePath, dirName);
             Files.createDirectories(dir);
@@ -61,7 +62,7 @@ public final class ZaFridaLogPaths {
                                                    @Nullable String fridaProjectDir,
                                                    @Nullable String packageName) {
         // 确定日志目录基础路径：优先使用 Frida 项目目录
-        String basePath = (fridaProjectDir != null && !fridaProjectDir.isBlank())
+        String basePath = ZaStrUtil.isNotBlank(fridaProjectDir)
                 ? fridaProjectDir
                 : projectBasePath;
 
@@ -71,7 +72,7 @@ public final class ZaFridaLogPaths {
         // 构建文件名：zafrida_{packageName}_{timestamp}.log 或 zafrida_{timestamp}.log
         String timestamp = LocalDateTime.now().format(FMT);
         String name;
-        if (packageName != null && !packageName.isBlank()) {
+        if (ZaStrUtil.isNotBlank(packageName)) {
             // 清理包名中的非法字符
             String safePackageName = sanitizeFileName(packageName);
             name = "zafrida_" + safePackageName + "_" + timestamp + ".log";

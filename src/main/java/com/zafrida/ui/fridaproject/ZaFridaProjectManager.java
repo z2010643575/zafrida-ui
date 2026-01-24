@@ -2,13 +2,13 @@ package com.zafrida.ui.fridaproject;
 
 import com.intellij.openapi.components.Service;
 import com.intellij.openapi.project.Project;
-import com.intellij.openapi.util.text.StringUtil;
 import com.intellij.openapi.vfs.VfsUtil;
 import com.intellij.openapi.vfs.VfsUtilCore;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.util.SlowOperations;
 import com.zafrida.ui.frida.FridaProcessScope;
 import com.zafrida.ui.frida.FridaConnectionMode;
+import com.zafrida.ui.util.ZaStrUtil;
 import com.intellij.util.messages.Topic;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -115,7 +115,7 @@ public final class ZaFridaProjectManager {
 
         // 读取项目配置
         ZaFridaProjectConfig cfg = storage.loadProjectConfig(project, dir);
-        String name = StringUtil.isEmptyOrSpaces(cfg.name) ? dir.getName() : cfg.name;
+        String name = ZaStrUtil.isBlank(cfg.name) ? dir.getName() : cfg.name;
         ZaFridaPlatform platform = inferPlatform(rel, cfg.platform);
 
         ZaFridaFridaProject target = null;
@@ -320,7 +320,7 @@ public final class ZaFridaProjectManager {
 
         ZaFridaProjectConfig cfg = storage.loadProjectConfig(project, dir);
         String defaultMain = ZaFridaProjectFiles.defaultMainScriptName(p.getName());
-        String oldMain = StringUtil.isEmptyOrSpaces(cfg.mainScript) ? defaultMain : cfg.mainScript;
+        String oldMain = ZaStrUtil.isBlank(cfg.mainScript) ? defaultMain : cfg.mainScript;
 
         String leaf = targetLeaf(targetId);
         String autoName = leaf + ".js";
@@ -334,7 +334,7 @@ public final class ZaFridaProjectManager {
             if (created != null) return created;
         }
 
-        if (StringUtil.isEmptyOrSpaces(cfg.mainScript)) {
+        if (ZaStrUtil.isBlank(cfg.mainScript)) {
             cfg.mainScript = defaultMain;
             storage.saveProjectConfig(project, dir, cfg);
         }
@@ -403,7 +403,7 @@ public final class ZaFridaProjectManager {
         if (base == null) return null;
         final String[] relRef = new String[1];
         SlowOperations.allowSlowOperations(() -> relRef[0] = VfsUtilCore.getRelativePath(dir, base, '/'));
-        if (StringUtil.isEmptyOrSpaces(relRef[0])) return null;
+        if (ZaStrUtil.isBlank(relRef[0])) return null;
         return relRef[0];
     }
 

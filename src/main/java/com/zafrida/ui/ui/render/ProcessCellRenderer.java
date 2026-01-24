@@ -3,6 +3,7 @@ package com.zafrida.ui.ui.render;
 import com.intellij.ui.ColoredListCellRenderer;
 import com.intellij.ui.SimpleTextAttributes;
 import com.zafrida.ui.frida.FridaProcess;
+import com.zafrida.ui.util.ZaStrUtil;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -36,7 +37,7 @@ public final class ProcessCellRenderer extends ColoredListCellRenderer<FridaProc
         append("  ");
         append(value.getName(), SimpleTextAttributes.REGULAR_ATTRIBUTES);
 
-        if (value.getIdentifier() != null && !value.getIdentifier().isBlank()) {
+        if (ZaStrUtil.isNotBlank(value.getIdentifier())) {
             append("  ");
             append(value.getIdentifier(), SimpleTextAttributes.GRAYED_ATTRIBUTES);
         }

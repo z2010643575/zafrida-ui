@@ -6,7 +6,6 @@ import com.intellij.openapi.actionSystem.AnActionEvent;
 import com.intellij.openapi.actionSystem.CommonDataKeys;
 import com.intellij.openapi.actionSystem.LangDataKeys;
 import com.intellij.openapi.project.Project;
-import com.intellij.openapi.util.text.StringUtil;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.openapi.wm.ToolWindowManager;
 import com.intellij.pom.Navigatable;
@@ -18,6 +17,7 @@ import com.zafrida.ui.fridaproject.ZaFridaProjectConfig;
 import com.zafrida.ui.fridaproject.ZaFridaProjectFiles;
 import com.zafrida.ui.fridaproject.ZaFridaProjectManager;
 import com.zafrida.ui.util.ZaFridaNotifier;
+import com.zafrida.ui.util.ZaStrUtil;
 
 import java.util.Arrays;
 import java.util.Comparator;
@@ -145,7 +145,7 @@ public final class LoadZaFridaProjectFromFolderAction extends AnAction {
     }
 
     private static boolean hasValidMainScript(VirtualFile dir, ZaFridaProjectConfig cfg) {
-        if (StringUtil.isEmptyOrSpaces(cfg.mainScript)) return false;
+        if (ZaStrUtil.isBlank(cfg.mainScript)) return false;
         final VirtualFile[] ref = new VirtualFile[1];
         SlowOperations.allowSlowOperations(() -> ref[0] = dir.findFileByRelativePath(cfg.mainScript));
         return ref[0] != null && !ref[0].isDirectory();

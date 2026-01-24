@@ -12,6 +12,7 @@ import com.zafrida.ui.python.ProjectPythonEnvResolver;
 import com.zafrida.ui.python.PythonEnvInfo;
 import com.zafrida.ui.settings.ZaFridaSettingsService;
 import com.zafrida.ui.settings.ZaFridaSettingsState;
+import com.zafrida.ui.util.ZaStrUtil;
 import org.jetbrains.annotations.NotNull;
 
 import java.nio.charset.StandardCharsets;
@@ -100,7 +101,7 @@ public final class FridaCliService {
         cmd.addParameters("-l", config.getScriptPath());
 
         String extra = config.getExtraArgs();
-        if (extra != null && !extra.trim().isEmpty()) {
+        if (ZaStrUtil.isNotBlank(extra)) {
             CommandLineTokenizer tok = new CommandLineTokenizer(extra);
             while (tok.hasMoreTokens()) {
                 cmd.addParameter(tok.nextToken());
@@ -190,7 +191,7 @@ public final class FridaCliService {
     private void addDeviceArgs(@NotNull GeneralCommandLine cmd, @NotNull FridaDevice device) {
         if (device.getMode() == FridaDeviceMode.HOST) {
             String host = device.getHost();
-            if (host == null || host.isBlank()) {
+            if (ZaStrUtil.isBlank(host)) {
                 throw new IllegalArgumentException("Device host is null/blank");
             }
             cmd.addParameters("-H", host);

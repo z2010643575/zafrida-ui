@@ -3,6 +3,7 @@ package com.zafrida.ui.config;
 import com.intellij.openapi.components.*;
 import com.intellij.openapi.project.Project;
 import com.intellij.util.xmlb.XmlSerializerUtil;
+import com.zafrida.ui.util.ZaStrUtil;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -74,8 +75,8 @@ public final class ZaFridaProjectSettings implements PersistentStateComponent<Za
      * @param pkg
      */
     public void addRecentPackage(String pkg) {
-        if (pkg == null || pkg.trim().isEmpty()) return;
-        pkg = pkg.trim();
+        if (ZaStrUtil.isBlank(pkg)) return;
+        pkg = ZaStrUtil.trim(pkg);
         recentPackages.remove(pkg);
         recentPackages.add(0, pkg);
         if (recentPackages.size() > 20) {

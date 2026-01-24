@@ -7,6 +7,7 @@ import com.intellij.ui.components.JBScrollPane;
 import com.intellij.ui.components.JBTextField;
 import com.intellij.util.ui.FormBuilder;
 import com.intellij.openapi.ui.Messages;
+import com.zafrida.ui.util.ZaStrUtil;
 import org.jetbrains.annotations.NotNull;
 
 import javax.swing.DefaultListModel;
@@ -134,7 +135,7 @@ public final class ZaFridaSettingsComponent {
         remoteModel.clear();
         if (state.remoteHosts != null) {
             for (String h : state.remoteHosts) {
-                if (h != null && !h.isBlank()) remoteModel.addElement(h);
+                if (ZaStrUtil.isNotBlank(h)) remoteModel.addElement(h);
             }
         }
     }
@@ -178,9 +179,8 @@ public final class ZaFridaSettingsComponent {
      * @return 结果字符串
      */
     private static String textOrDefault(String s, String d) {
-        if (s == null) return d;
-        String t = s.trim();
-        return t.isEmpty() ? d : t;
+        if (ZaStrUtil.isBlank(s)) return d;
+        return ZaStrUtil.trim(s);
     }
 
     /**
@@ -190,7 +190,7 @@ public final class ZaFridaSettingsComponent {
      * @return 结果字符串
      */
     private static String orDefault(String s, String d) {
-        if (s == null || s.trim().isEmpty()) return d;
+        if (ZaStrUtil.isBlank(s)) return d;
         return s;
     }
 
@@ -201,7 +201,7 @@ public final class ZaFridaSettingsComponent {
      * @return 端口值
      */
     private static int parsePort(String s, int fallback) {
-        if (s == null || s.trim().isEmpty()) return fallback;
+        if (ZaStrUtil.isBlank(s)) return fallback;
         try {
             int v = Integer.parseInt(s.trim());
             return v > 0 ? v : fallback;
