@@ -122,6 +122,15 @@ public final class AdbService {
                 .withCharset(StandardCharsets.UTF_8);
     }
 
+    /**
+     * 构建 adb version 命令行，用于可用性检查。
+     * @return GeneralCommandLine
+     */
+    public @NotNull GeneralCommandLine buildVersionCommandLine() {
+        return new GeneralCommandLine("adb", "version")
+                .withCharset(StandardCharsets.UTF_8);
+    }
+
     private static @NotNull GeneralCommandLine buildForceStopCommand(@NotNull String packageName,
                                                                      @Nullable String deviceId) {
         List<String> args = baseAdbArgs(deviceId);

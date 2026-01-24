@@ -126,6 +126,42 @@ public final class FridaCliService {
     }
 
     /**
+     * 构建 frida --version 命令行。
+     * @param project 当前 IDE 项目
+     * @return GeneralCommandLine
+     */
+    public @NotNull GeneralCommandLine buildFridaVersionCommandLine(@NotNull Project project) {
+        ZaFridaSettingsState s = settings.getState();
+        GeneralCommandLine cmd = new GeneralCommandLine(s.fridaExecutable)
+                .withCharset(StandardCharsets.UTF_8);
+        applyProjectPythonEnv(project, cmd);
+        cmd.addParameter("--version");
+        return cmd;
+    }
+
+    /**
+     * 构建 frida-ls-devices 命令行（用于诊断）。
+     * @param project 当前 IDE 项目
+     * @return GeneralCommandLine
+     */
+    public @NotNull GeneralCommandLine buildLsDevicesCommandLineForDiagnostics(@NotNull Project project) {
+        return buildLsDevicesCommandLine(project);
+    }
+
+    /**
+     * 构建 frida-ps 命令行（用于诊断）。
+     * @param project 当前 IDE 项目
+     * @param device 目标设备
+     * @param scope 查询范围
+     * @return GeneralCommandLine
+     */
+    public @NotNull GeneralCommandLine buildPsCommandLineForDiagnostics(@NotNull Project project,
+                                                                        @NotNull FridaDevice device,
+                                                                        @NotNull FridaProcessScope scope) {
+        return buildPsCommandLine(project, device, scope);
+    }
+
+    /**
      * 构建 frida-ls-devices 命令行。
      * @param project 当前 IDE 项目
      * @return GeneralCommandLine

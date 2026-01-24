@@ -4,6 +4,7 @@ import com.intellij.openapi.Disposable;
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.project.Project;
 import com.zafrida.ui.adb.AdbService;
+import com.zafrida.ui.diagnostics.EnvironmentDoctorDialog;
 import com.intellij.icons.AllIcons;
 import com.intellij.ide.plugins.IdeaPluginDescriptor;
 import com.intellij.ide.plugins.PluginManagerCore;
@@ -58,6 +59,7 @@ import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Supplier;
 
 /**
  * [UI组件] 运行控制主面板。
@@ -739,6 +741,20 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
     }
 
     /**
+     * 打开环境医生对话框。
+     */
+    public void openEnvironmentDoctorDialog() {
+        Supplier<FridaDevice> supplier = new Supplier<FridaDevice>() {
+            @Override
+            public FridaDevice get() {
+                return getSelectedDeviceForDiagnostics();
+            }
+        };
+        EnvironmentDoctorDialog dialog = new EnvironmentDoctorDialog(project, supplier);
+        dialog.show();
+    }
+
+    /**
      * 显示语言切换提示。
      */
     public void showLanguageToggleMessage() {
@@ -1406,6 +1422,14 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
             return null;
         }
         return dev;
+    }
+
+    /**
+     * 获取当前选中设备（用于诊断）。
+     * @return 设备或 null
+     */
+    private @Nullable FridaDevice getSelectedDeviceForDiagnostics() {
+        return (FridaDevice) deviceCombo.getSelectedItem();
     }
 
     /**

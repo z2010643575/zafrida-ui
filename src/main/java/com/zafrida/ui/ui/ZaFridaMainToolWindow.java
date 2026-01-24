@@ -106,13 +106,17 @@ public final class ZaFridaMainToolWindow extends JPanel implements Disposable {
         newProjectBtn.setIcon(AllIcons.Actions.NewFolder);
         newProjectBtn.addActionListener(e -> runPanel.openNewProjectDialog());
 
-        JButton projectSettingsBtn = new JButton("Project Settings");
+        JButton projectSettingsBtn = new JButton("Project");
         projectSettingsBtn.setIcon(AllIcons.General.Settings);
         projectSettingsBtn.addActionListener(e -> runPanel.openProjectSettingsDialog());
 
-        JButton globalSettingsBtn = new JButton("Global Settings");
+        JButton globalSettingsBtn = new JButton("Global");
         globalSettingsBtn.setIcon(AllIcons.General.Settings);
         globalSettingsBtn.addActionListener(e -> runPanel.openGlobalSettingsDialog());
+
+        JButton doctorBtn = new JButton("Doctor");
+        doctorBtn.setIcon(AllIcons.General.InspectionsOK);
+        doctorBtn.addActionListener(e -> runPanel.openEnvironmentDoctorDialog());
 
         JButton languageToggleBtn = new JButton(
                 IconLoader.getIcon("/META-INF/icons/lang-toggle.svg", ZaFridaMainToolWindow.class)
@@ -123,7 +127,8 @@ public final class ZaFridaMainToolWindow extends JPanel implements Disposable {
         projectRow.add(newProjectBtn);
         projectRow.add(projectSettingsBtn);
         projectRow.add(globalSettingsBtn);
-        projectRow.add(languageToggleBtn);
+        projectRow.add(doctorBtn);
+        // projectRow.add(languageToggleBtn);
 
         JPanel runRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
         JButton runBtn = new JButton("Run");

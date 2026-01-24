@@ -59,6 +59,9 @@ public final class ZaFridaGlobalSettings implements PersistentStateComponent<ZaF
     /** 设备列表刷新配置：是否自动刷新 */
     public boolean autoRefreshDevices = false;
 
+    /** 环境医生是否已在首次打开时展示 */
+    public boolean environmentDoctorShown = false;
+
     /**
      * 获取全局唯一实例。
      * @return ZaFridaGlobalSettings
