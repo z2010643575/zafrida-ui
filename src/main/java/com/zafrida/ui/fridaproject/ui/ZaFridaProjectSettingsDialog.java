@@ -19,6 +19,7 @@ import com.zafrida.ui.fridaproject.ZaFridaProjectManager;
 import com.zafrida.ui.settings.ZaFridaSettingsService;
 import com.zafrida.ui.settings.ZaFridaSettingsState;
 import com.zafrida.ui.util.ZaFridaIcons;
+import com.zafrida.ui.util.ZaFridaNetUtil;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -284,9 +285,9 @@ public final class ZaFridaProjectSettingsDialog extends DialogWrapper {
         ZaFridaSettingsState st = ApplicationManager.getApplication()
                 .getService(ZaFridaSettingsService.class)
                 .getState();
-        String host = !isBlank(cfg.remoteHost) ? cfg.remoteHost : safeHost(st.defaultRemoteHost);
-        if (host.isEmpty()) host = "127.0.0.1";
-        int port = cfg.remotePort > 0 ? cfg.remotePort : safePort(st.defaultRemotePort);
+        String host = !isBlank(cfg.remoteHost) ? cfg.remoteHost : ZaFridaNetUtil.normalizeHost(st.defaultRemoteHost);
+        if (host.isEmpty()) host = ZaFridaNetUtil.LOOPBACK_HOST;
+        int port = cfg.remotePort > 0 ? cfg.remotePort : ZaFridaNetUtil.defaultPort(st.defaultRemotePort);
         remoteHostField.setText(host);
         remotePortField.setText(String.valueOf(port));
 
@@ -466,12 +467,12 @@ public final class ZaFridaProjectSettingsDialog extends DialogWrapper {
         ZaFridaSettingsState st = ApplicationManager.getApplication()
                 .getService(ZaFridaSettingsService.class)
                 .getState();
-        String host = safeHost(remoteHostField.getText());
-        if (host.isEmpty()) host = safeHost(st.defaultRemoteHost);
-        if (host.isEmpty()) host = "127.0.0.1";
+        String host = ZaFridaNetUtil.normalizeHost(remoteHostField.getText());
+        if (host.isEmpty()) host = ZaFridaNetUtil.normalizeHost(st.defaultRemoteHost);
+        if (host.isEmpty()) host = ZaFridaNetUtil.LOOPBACK_HOST;
 
         int port = parsePort(remotePortField.getText());
-        if (port <= 0) port = safePort(st.defaultRemotePort);
+        if (port <= 0) port = ZaFridaNetUtil.defaultPort(st.defaultRemotePort);
         return new HostPort(host, port);
     }
 
@@ -482,25 +483,6 @@ public final class ZaFridaProjectSettingsDialog extends DialogWrapper {
      */
     private static boolean isBlank(@Nullable String value) {
         return value == null || value.trim().isEmpty();
-    }
-
-    /**
-     * 标准化主机地址字符串。
-     * @param host 输入主机
-     * @return 标准化结果
-     */
-    private static String safeHost(@Nullable String host) {
-        if (host == null) return "";
-        return host.trim();
-    }
-
-    /**
-     * 标准化端口值。
-     * @param port 输入端口
-     * @return 合法端口或默认值
-     */
-    private static int safePort(int port) {
-        return port > 0 ? port : 14725;
     }
 
     /**

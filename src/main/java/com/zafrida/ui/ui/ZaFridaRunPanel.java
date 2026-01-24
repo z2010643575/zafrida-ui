@@ -3,9 +3,7 @@ package com.zafrida.ui.ui;
 import com.intellij.openapi.Disposable;
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.project.Project;
-import com.intellij.execution.configurations.GeneralCommandLine;
-import com.intellij.execution.process.CapturingProcessHandler;
-import com.intellij.execution.process.ProcessOutput;
+import com.zafrida.ui.adb.AdbService;
 import com.intellij.icons.AllIcons;
 import com.intellij.ide.plugins.IdeaPluginDescriptor;
 import com.intellij.ide.plugins.PluginManagerCore;
@@ -32,8 +30,10 @@ import com.zafrida.ui.ui.components.SearchableComboBoxPanel;
 import com.zafrida.ui.ui.components.SimpleDocumentListener;
 import com.zafrida.ui.ui.render.DeviceCellRenderer;
 import com.zafrida.ui.util.ProjectFileUtil;
+import com.zafrida.ui.util.ZaFridaNetUtil;
 import com.zafrida.ui.util.ZaFridaIcons;
 import com.zafrida.ui.util.ZaFridaNotifier;
+import com.zafrida.ui.util.ZaFridaTextUtil;
 import com.zafrida.ui.settings.ZaFridaSettingsService;
 import com.zafrida.ui.settings.ZaFridaSettingsState;
 import com.intellij.util.io.HttpRequests;
@@ -92,6 +92,8 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
     private final @NotNull FridaCliService fridaCli;
     /** 会话服务 */
     private final @NotNull ZaFridaSessionService sessionService;
+    /** ADB 服务 */
+    private final @NotNull AdbService adbService;
 
     /** 设备下拉框 */
     private final ComboBox<FridaDevice> deviceCombo = new ComboBox<>();
@@ -189,6 +191,7 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
 
         this.fridaCli = ApplicationManager.getApplication().getService(FridaCliService.class);
         this.sessionService = project.getService(ZaFridaSessionService.class);
+        this.adbService = ApplicationManager.getApplication().getService(AdbService.class);
         this.fridaProjectManager = project.getService(ZaFridaProjectManager.class);
 
 
@@ -369,8 +372,8 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
             ZaFridaSettingsState st = ApplicationManager.getApplication()
                     .getService(ZaFridaSettingsService.class)
                     .getState();
-            String defHost = safeHost(st.defaultRemoteHost);
-            int defPort = safePort(st.defaultRemotePort);
+            String defHost = ZaFridaNetUtil.defaultHost(st.defaultRemoteHost);
+            int defPort = ZaFridaNetUtil.defaultPort(st.defaultRemotePort);
             String initial = defHost + ":" + defPort;
 
             String host = Messages.showInputDialog(this, "host:port", "Add Frida Remote Host", null, initial, null);
@@ -1216,7 +1219,7 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
         ZaFridaSettingsState st = ApplicationManager.getApplication()
                 .getService(ZaFridaSettingsService.class)
                 .getState();
-        return safeHost(st.defaultRemoteHost);
+        return ZaFridaNetUtil.defaultHost(st.defaultRemoteHost);
     }
 
     /**
@@ -1231,37 +1234,7 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
         ZaFridaSettingsState st = ApplicationManager.getApplication()
                 .getService(ZaFridaSettingsService.class)
                 .getState();
-        return safePort(st.defaultRemotePort);
-    }
-
-    /**
-     * 规范化主机地址。
-     * @param host 主机地址
-     * @return 规范化后的主机地址
-     */
-    private static @NotNull String safeHost(@Nullable String host) {
-        if (host == null || host.isBlank()) return "127.0.0.1";
-        return host.trim();
-    }
-
-    /**
-     * 判断是否为回环地址。
-     * @param host 主机地址
-     * @return true 表示回环
-     */
-    private static boolean isLoopbackHost(@Nullable String host) {
-        if (host == null) return false;
-        String trimmed = host.trim();
-        return "127.0.0.1".equals(trimmed) || "localhost".equalsIgnoreCase(trimmed);
-    }
-
-    /**
-     * 规范化端口值。
-     * @param port 端口值
-     * @return 合法端口
-     */
-    private static int safePort(int port) {
-        return port > 0 ? port : 14725;
+        return ZaFridaNetUtil.defaultPort(st.defaultRemotePort);
     }
 
 
@@ -1331,9 +1304,9 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
         final String finalTargetPackage = targetPackage;
         Runnable startSession = () -> startFridaSession(ZaFridaSessionType.RUN, cfg, console, finalFridaProjectDir, finalTargetPackage);
         boolean needsAdbForward = (connectionMode == FridaConnectionMode.REMOTE || gadgetMode)
-                && isLoopbackHost(resolveRemoteHost(projectConfig));
+                && ZaFridaNetUtil.isLoopbackHost(resolveRemoteHost(projectConfig));
         if (needsAdbForward) {
-            runAdbForward(resolveRemotePort(projectConfig), console, startSession);
+            adbService.forwardTcp(resolveRemotePort(projectConfig), console::info, console::warn, startSession);
             return;
         }
 
@@ -1400,9 +1373,9 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
         final String finalTargetPackage = targetPackage;
         Runnable startSession = () -> startFridaSession(ZaFridaSessionType.ATTACH, cfg, console, finalFridaProjectDir, finalTargetPackage);
         boolean needsAdbForward = (connectionMode == FridaConnectionMode.REMOTE || gadgetMode)
-                && isLoopbackHost(resolveRemoteHost(projectConfig));
+                && ZaFridaNetUtil.isLoopbackHost(resolveRemoteHost(projectConfig));
         if (needsAdbForward) {
-            runAdbForward(resolveRemotePort(projectConfig), console, startSession);
+            adbService.forwardTcp(resolveRemotePort(projectConfig), console::info, console::warn, startSession);
             return;
         }
 
@@ -1527,48 +1500,6 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
     }
 
     /**
-     * 执行 ADB 端口转发并在完成后回调。
-     * @param port 端口号
-     * @param console 控制台面板
-     * @param onDone 完成回调
-     */
-    private void runAdbForward(int port, @NotNull ZaFridaConsolePanel console, @NotNull Runnable onDone) {
-        String tcp = "tcp:" + port;
-        GeneralCommandLine cmd = new GeneralCommandLine("adb", "forward", tcp, tcp);
-        console.info("[ZAFrida] ADB forward: " + cmd.getCommandLineString());
-
-        ApplicationManager.getApplication().executeOnPooledThread(() -> {
-            try {
-                CapturingProcessHandler handler = new CapturingProcessHandler(cmd);
-                ProcessOutput out = handler.runProcess(10_000);
-                String stdout = out.getStdout() != null ? out.getStdout().trim() : "";
-                String stderr = out.getStderr() != null ? out.getStderr().trim() : "";
-                int exitCode = out.getExitCode();
-
-                ApplicationManager.getApplication().invokeLater(() -> {
-                    if (exitCode != 0) {
-                        console.warn("[ZAFrida] ADB forward failed (exitCode=" + exitCode + ")");
-                    } else {
-                        console.info("[ZAFrida] ADB forward ready on port " + port);
-                    }
-                    if (!stdout.isBlank()) {
-                        console.info("[ZAFrida] " + stdout);
-                    }
-                    if (!stderr.isBlank()) {
-                        console.warn("[ZAFrida] " + stderr);
-                    }
-                    onDone.run();
-                });
-            } catch (Throwable t) {
-                ApplicationManager.getApplication().invokeLater(() -> {
-                    console.warn("[ZAFrida] ADB forward failed: " + t.getMessage());
-                    onDone.run();
-                });
-            }
-        });
-    }
-
-    /**
      * 停止当前会话。
      */
     private void stopFrida() {
@@ -1599,46 +1530,7 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
                 deviceId = id;
             }
         }
-
-        List<String> args = new ArrayList<>();
-        args.add("adb");
-        if (deviceId != null) {
-            args.add("-s");
-            args.add(deviceId);
-        }
-        args.add("shell");
-        args.add("am");
-        args.add("force-stop");
-        args.add(packageName);
-
-        GeneralCommandLine cmd = new GeneralCommandLine(args);
-        runConsolePanel.info("[ZAFrida] Force stop command: " + cmd.getCommandLineString());
-
-        ApplicationManager.getApplication().executeOnPooledThread(() -> {
-            try {
-                CapturingProcessHandler handler = new CapturingProcessHandler(cmd);
-                ProcessOutput out = handler.runProcess(10_000);
-                String stdout = out.getStdout() != null ? out.getStdout().trim() : "";
-                String stderr = out.getStderr() != null ? out.getStderr().trim() : "";
-                int exitCode = out.getExitCode();
-                ApplicationManager.getApplication().invokeLater(() -> {
-                    if (exitCode == 0) {
-                        runConsolePanel.info("[ZAFrida] Force stopped: " + packageName);
-                        if (!stdout.isBlank()) {
-                            runConsolePanel.info(stdout);
-                        }
-                    } else {
-                        String detail = !stderr.isBlank() ? stderr : stdout;
-                        if (detail.isBlank()) detail = "unknown error";
-                        runConsolePanel.error("[ZAFrida] Force stop failed (exit=" + exitCode + "): " + detail);
-                    }
-                });
-            } catch (Throwable t) {
-                ApplicationManager.getApplication().invokeLater(() ->
-                        runConsolePanel.error("[ZAFrida] Force stop failed: " + t.getMessage())
-                );
-            }
-        });
+        adbService.forceStop(packageName, deviceId, runConsolePanel::info, runConsolePanel::error);
     }
 
     /**
@@ -1662,49 +1554,7 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
                 deviceId = id;
             }
         }
-
-        List<String> args = new ArrayList<>();
-        args.add("adb");
-        if (deviceId != null) {
-            args.add("-s");
-            args.add(deviceId);
-        }
-        args.add("shell");
-        args.add("monkey");
-        args.add("-p");
-        args.add(packageName);
-        args.add("-c");
-        args.add("android.intent.category.LAUNCHER");
-        args.add("1");
-
-        GeneralCommandLine cmd = new GeneralCommandLine(args);
-        runConsolePanel.info("[ZAFrida] Open app command: " + cmd.getCommandLineString());
-
-        ApplicationManager.getApplication().executeOnPooledThread(() -> {
-            try {
-                CapturingProcessHandler handler = new CapturingProcessHandler(cmd);
-                ProcessOutput out = handler.runProcess(10_000);
-                String stdout = out.getStdout() != null ? out.getStdout().trim() : "";
-                String stderr = out.getStderr() != null ? out.getStderr().trim() : "";
-                int exitCode = out.getExitCode();
-                ApplicationManager.getApplication().invokeLater(() -> {
-                    if (exitCode == 0) {
-                        runConsolePanel.info("[ZAFrida] Opened app: " + packageName);
-                        if (!stdout.isBlank()) {
-                            runConsolePanel.info(stdout);
-                        }
-                    } else {
-                        String detail = !stderr.isBlank() ? stderr : stdout;
-                        if (detail.isBlank()) detail = "unknown error";
-                        runConsolePanel.error("[ZAFrida] Open app failed (exit=" + exitCode + "): " + detail);
-                    }
-                });
-            } catch (Throwable t) {
-                ApplicationManager.getApplication().invokeLater(() ->
-                        runConsolePanel.error("[ZAFrida] Open app failed: " + t.getMessage())
-                );
-            }
-        });
+        adbService.openApp(packageName, deviceId, runConsolePanel::info, runConsolePanel::error);
     }
 
     /**
@@ -1716,24 +1566,12 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
         boolean gadgetMode = cfg != null && cfg.connectionMode == FridaConnectionMode.GADGET;
         String target = gadgetMode ? "" : (targetField.getText() != null ? targetField.getText().trim() : "");
         if (!target.isEmpty()) {
-            if (!isNumeric(target)) return target;
+            if (!ZaFridaTextUtil.isNumeric(target)) return target;
         }
         if (cfg != null && !StringUtil.isEmptyOrSpaces(cfg.lastTarget)) {
             return cfg.lastTarget.trim();
         }
         return null;
-    }
-
-    /**
-     * 判断字符串是否为数字。
-     * @param value 字符串
-     * @return true 表示为数字
-     */
-    private static boolean isNumeric(@NotNull String value) {
-        for (int i = 0; i < value.length(); i++) {
-            if (!Character.isDigit(value.charAt(i))) return false;
-        }
-        return !value.isEmpty();
     }
 
     /**
