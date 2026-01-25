@@ -58,11 +58,15 @@ public final class AttachFridaJsAction extends AnAction {
     public void actionPerformed(@NotNull AnActionEvent e) {
         // 获取当前项目, 也就是IntelliJ/PyCharm中的Project
         Project project = e.getProject();
-        if (project == null) return;
+        if (project == null) {
+            return;
+        }
 
         // 解析当前脚本文件
         VirtualFile script = resolveScriptFile(e);
-        if (script == null || script.isDirectory() || !isJsFile(script)) return;
+        if (script == null || script.isDirectory() || !isJsFile(script)) {
+            return;
+        }
 
         // 保存当前编辑器内容
         Editor editor = e.getData(CommonDataKeys.EDITOR);
@@ -73,36 +77,45 @@ public final class AttachFridaJsAction extends AnAction {
         // 查找脚本对应的Frida项目
         ZaFridaProjectManager pm = project.getService(ZaFridaProjectManager.class);
         ZaFridaFridaProject previous = pm.getActiveProject();
-        VirtualFile projectDir = findFridaProjectDir(project, script);
-        if (projectDir == null) {
-            ZaFridaNotifier.warn(project, "ZAFrida", "No Frida project found for this script");
-            return;
-        }
 
-        // 切换到对应的Frida项目
-        ZaFridaFridaProject target = pm.findProjectByDir(projectDir);
-        if (target == null) {
-            target = pm.registerExistingProject(projectDir, true);
-            if (target == null) {
-                ZaFridaNotifier.warn(project, "ZAFrida", "Frida project is not under IDE root");
+        ApplicationManager.getApplication().executeOnPooledThread(() -> {
+            VirtualFile projectDir = findFridaProjectDir(project, script);
+            if (projectDir == null) {
+                ApplicationManager.getApplication().invokeLater(() ->
+                        ZaFridaNotifier.warn(project, "ZAFrida", "No Frida project found for this script"));
                 return;
             }
-        }
 
-        // 判断是否是切换项目
-        boolean switching = previous == null || !previous.equals(target);
-        if (!target.equals(pm.getActiveProject())) {
-            pm.setActiveProject(target);
-        }
+            pm.findProjectByDirAsync(projectDir, target -> {
+                if (target == null) {
+                    pm.registerExistingProjectAsync(projectDir, true, loaded -> {
+                        if (loaded == null) {
+                            ZaFridaNotifier.warn(project, "ZAFrida", "Frida project is not under IDE root");
+                            return;
+                        }
+                        boolean switching = previous == null || !previous.equals(loaded);
+                        activateAndAttach(project, script, switching);
+                    });
+                    return;
+                }
 
-        // 获取toolWindow
+                boolean switching = previous == null || !previous.equals(target);
+                if (!target.equals(pm.getActiveProject())) {
+                    pm.setActiveProjectAsync(target, () -> activateAndAttach(project, script, switching));
+                } else {
+                    activateAndAttach(project, script, switching);
+                }
+            });
+        });
+    }
+
+    private void activateAndAttach(@NotNull Project project, @NotNull VirtualFile script, boolean switching) {
         ToolWindow toolWindow = ToolWindowManager.getInstance(project).getToolWindow("ZAFrida");
         if (toolWindow == null) {
             ZaFridaNotifier.warn(project, "ZAFrida", "ZAFrida tool window not available");
             return;
         }
 
-        // 获取Run Panel并执行附加操作
         Runnable runTask = () -> {
             ZaFridaRunPanel runPanel = findRunPanel(toolWindow);
             if (runPanel == null) {
@@ -117,7 +130,6 @@ public final class AttachFridaJsAction extends AnAction {
             }
         };
 
-        // 使用ToolWindow激活runTask
         toolWindow.activate(runTask);
     }
 

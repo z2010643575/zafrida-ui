@@ -13,7 +13,7 @@ import com.zafrida.ui.util.ZaFridaNotifier;
  * <p>
  * <strong>流程：</strong>
  * 1. 弹出 {@link CreateZaFridaProjectDialog} 获取项目名和平台。
- * 2. 调用 {@link ZaFridaProjectManager#createAndActivate} 执行核心创建逻辑（创建目录、生成默认脚本、写入 XML）。
+ * 2. 调用 {@link ZaFridaProjectManager#createAndActivateAsync} 在后台执行创建逻辑（创建目录、生成默认脚本、写入 XML）。
  * 3. 自动切换到新创建的项目。
  */
 public final class NewZaFridaProjectAction extends AnAction {
@@ -25,10 +25,14 @@ public final class NewZaFridaProjectAction extends AnAction {
     @Override
     public void actionPerformed(AnActionEvent e) {
         Project project = e.getProject();
-        if (project == null) return;
+        if (project == null) {
+            return;
+        }
 
         CreateZaFridaProjectDialog dialog = new CreateZaFridaProjectDialog(project);
-        if (!dialog.showAndGet()) return;
+        if (!dialog.showAndGet()) {
+            return;
+        }
 
         String name = dialog.getProjectName();
         if (name.isEmpty()) {
@@ -37,12 +41,9 @@ public final class NewZaFridaProjectAction extends AnAction {
         }
 
         ZaFridaPlatform platform = dialog.getPlatform();
-        try {
-            ZaFridaProjectManager pm = project.getService(ZaFridaProjectManager.class);
-            ZaFridaFridaProject created = pm.createAndActivate(name, platform);
-            ZaFridaNotifier.info(project, "ZAFrida", "Created project: " + created.getName());
-        } catch (Throwable t) {
-            ZaFridaNotifier.error(project, "ZAFrida", "Create project failed: " + t.getMessage());
-        }
+        ZaFridaProjectManager pm = project.getService(ZaFridaProjectManager.class);
+        pm.createAndActivateAsync(name, platform,
+                created -> ZaFridaNotifier.info(project, "ZAFrida", "Created project: " + created.getName()),
+                t -> ZaFridaNotifier.error(project, "ZAFrida", "Create project failed: " + t.getMessage()));
     }
 }

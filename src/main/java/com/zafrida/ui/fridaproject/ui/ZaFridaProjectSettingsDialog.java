@@ -91,6 +91,8 @@ public final class ZaFridaProjectSettingsDialog extends DialogWrapper {
 
     /** 当前激活项目 */
     private @Nullable ZaFridaFridaProject activeProject;
+    /** 当前激活项目配置（后台加载） */
+    private @Nullable ZaFridaProjectConfig activeProjectConfig;
 
     /**
      * 构造函数。
@@ -262,6 +264,7 @@ public final class ZaFridaProjectSettingsDialog extends DialogWrapper {
     private void loadFromProject() {
         activeProject = projectManager.getActiveProject();
         updateProjectInfo();
+        activeProjectConfig = null;
         if (activeProject == null) {
             connectionModeCombo.setEnabled(false);
             remoteHostField.setEnabled(false);
@@ -274,32 +277,50 @@ public final class ZaFridaProjectSettingsDialog extends DialogWrapper {
             selectTargetRadio.setEnabled(false);
             return;
         }
+        ModalityState modality = ModalityState.stateForComponent(projectInfoLabel);
+        projectManager.loadProjectConfigAsync(activeProject, cfg -> {
+            activeProjectConfig = cfg;
+            connectionModeCombo.setEnabled(true);
+            manualTargetRadio.setEnabled(true);
+            selectTargetRadio.setEnabled(true);
+            scopeCombo.setSelectedItem(cfg.processScope);
+            setTargetText(cfg.lastTarget);
+            if (cfg.connectionMode != null) {
+                connectionModeCombo.setSelectedItem(cfg.connectionMode);
+            } else {
+                connectionModeCombo.setSelectedItem(FridaConnectionMode.USB);
+            }
 
-        ZaFridaProjectConfig cfg = projectManager.loadProjectConfig(activeProject);
-        connectionModeCombo.setEnabled(true);
-        manualTargetRadio.setEnabled(true);
-        selectTargetRadio.setEnabled(true);
-        scopeCombo.setSelectedItem(cfg.processScope);
-        setTargetText(cfg.lastTarget);
-        connectionModeCombo.setSelectedItem(cfg.connectionMode != null ? cfg.connectionMode : FridaConnectionMode.USB);
+            ZaFridaSettingsState st = ApplicationManager.getApplication()
+                    .getService(ZaFridaSettingsService.class)
+                    .getState();
+            String host;
+            if (ZaStrUtil.isNotBlank(cfg.remoteHost)) {
+                host = cfg.remoteHost;
+            } else {
+                host = ZaFridaNetUtil.normalizeHost(st.defaultRemoteHost);
+            }
+            if (host.isEmpty()) {
+                host = ZaFridaNetUtil.LOOPBACK_HOST;
+            }
+            int port;
+            if (cfg.remotePort > 0) {
+                port = cfg.remotePort;
+            } else {
+                port = ZaFridaNetUtil.defaultPort(st.defaultRemotePort);
+            }
+            remoteHostField.setText(host);
+            remotePortField.setText(String.valueOf(port));
 
-        ZaFridaSettingsState st = ApplicationManager.getApplication()
-                .getService(ZaFridaSettingsService.class)
-                .getState();
-        String host = ZaStrUtil.isNotBlank(cfg.remoteHost) ? cfg.remoteHost : ZaFridaNetUtil.normalizeHost(st.defaultRemoteHost);
-        if (host.isEmpty()) host = ZaFridaNetUtil.LOOPBACK_HOST;
-        int port = cfg.remotePort > 0 ? cfg.remotePort : ZaFridaNetUtil.defaultPort(st.defaultRemotePort);
-        remoteHostField.setText(host);
-        remotePortField.setText(String.valueOf(port));
+            manualTargetRadio.setSelected(cfg.targetManual);
+            selectTargetRadio.setSelected(!cfg.targetManual);
 
-        manualTargetRadio.setSelected(cfg.targetManual);
-        selectTargetRadio.setSelected(!cfg.targetManual);
-
-        updateConnectionUi();
-        updateTargetModeUi();
-        if (selectTargetRadio.isSelected()) {
-            refreshTargets();
-        }
+            updateConnectionUi();
+            updateTargetModeUi();
+            if (selectTargetRadio.isSelected()) {
+                refreshTargets();
+            }
+        }, modality);
     }
 
     /**
@@ -374,11 +395,23 @@ public final class ZaFridaProjectSettingsDialog extends DialogWrapper {
         FridaConnectionMode connectionMode = (FridaConnectionMode) connectionModeCombo.getSelectedItem();
         HostPort hostPort = resolveHostPortForSave();
 
-        projectManager.updateProjectConfig(activeProject, cfg -> {
-            cfg.processScope = scope != null ? scope : FridaProcessScope.RUNNING_APPS;
-            cfg.lastTarget = target.isEmpty() ? null : target;
+        projectManager.updateProjectConfigAsync(activeProject, cfg -> {
+            if (scope != null) {
+                cfg.processScope = scope;
+            } else {
+                cfg.processScope = FridaProcessScope.RUNNING_APPS;
+            }
+            if (target.isEmpty()) {
+                cfg.lastTarget = null;
+            } else {
+                cfg.lastTarget = target;
+            }
             cfg.targetManual = manualTargetRadio.isSelected();
-            cfg.connectionMode = connectionMode != null ? connectionMode : FridaConnectionMode.USB;
+            if (connectionMode != null) {
+                cfg.connectionMode = connectionMode;
+            } else {
+                cfg.connectionMode = FridaConnectionMode.USB;
+            }
             cfg.remoteHost = hostPort.host;
             cfg.remotePort = hostPort.port;
         });
@@ -446,15 +479,19 @@ public final class ZaFridaProjectSettingsDialog extends DialogWrapper {
         }
 
         FridaDevice device = deviceSupplier.get();
-        if (device != null) return device;
+        if (device != null) {
+            return device;
+        }
 
         if (activeProject != null) {
-            ZaFridaProjectConfig cfg = projectManager.loadProjectConfig(activeProject);
-            if (ZaStrUtil.isNotBlank(cfg.lastDeviceHost)) {
-                return new FridaDevice("remote:" + cfg.lastDeviceHost, "remote", "Remote", FridaDeviceMode.HOST, cfg.lastDeviceHost);
-            }
-            if (ZaStrUtil.isNotBlank(cfg.lastDeviceId)) {
-                return new FridaDevice(cfg.lastDeviceId, "device", cfg.lastDeviceId, FridaDeviceMode.DEVICE_ID, null);
+            ZaFridaProjectConfig cfg = activeProjectConfig;
+            if (cfg != null) {
+                if (ZaStrUtil.isNotBlank(cfg.lastDeviceHost)) {
+                    return new FridaDevice("remote:" + cfg.lastDeviceHost, "remote", "Remote", FridaDeviceMode.HOST, cfg.lastDeviceHost);
+                }
+                if (ZaStrUtil.isNotBlank(cfg.lastDeviceId)) {
+                    return new FridaDevice(cfg.lastDeviceId, "device", cfg.lastDeviceId, FridaDeviceMode.DEVICE_ID, null);
+                }
             }
         }
         return null;

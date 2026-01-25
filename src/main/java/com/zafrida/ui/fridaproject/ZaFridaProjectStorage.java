@@ -5,7 +5,6 @@ import com.intellij.openapi.project.Project;
 import com.intellij.openapi.vfs.VfsUtil;
 import com.intellij.openapi.vfs.VfsUtilCore;
 import com.intellij.openapi.vfs.VirtualFile;
-import com.intellij.util.SlowOperations;
 import com.zafrida.ui.frida.FridaConnectionMode;
 import com.zafrida.ui.frida.FridaProcessScope;
 import com.zafrida.ui.util.ZaStrUtil;
@@ -26,8 +25,9 @@ import java.nio.charset.StandardCharsets;
  * 负责 {@code zafrida-workspace.xml} 和 {@code zafrida-project.xml} 的序列化与反序列化。
  * <p>
  * <strong>规范：</strong>
- * 1. 所有写操作必须在 {@link WriteCommandAction} 或 {@link com.intellij.util.SlowOperations} 中执行。
- * 2. 使用 JDOM 解析 XML。
+ * 1. 所有写操作必须在 {@link WriteCommandAction} 中执行。
+ * 2. 配置读写由上层在后台线程串行调度（避免阻塞 EDT）。
+ * 3. 使用 JDOM 解析 XML。
  */
 public final class ZaFridaProjectStorage {
 
@@ -37,20 +37,20 @@ public final class ZaFridaProjectStorage {
      * @return 工作区配置
      */
     public @NotNull ZaFridaWorkspaceConfig loadWorkspace(@NotNull Project project) {
-        final ZaFridaWorkspaceConfig[] out = new ZaFridaWorkspaceConfig[]{new ZaFridaWorkspaceConfig()};
-        SlowOperations.allowSlowOperations(() -> {
-            VirtualFile base = project.getBaseDir();
-            if (base == null) return;
-            VirtualFile file = base.findChild(ZaFridaProjectFiles.WORKSPACE_FILE);
-            if (file == null) return;
-            try {
-                String xml = VfsUtilCore.loadText(file);
-                out[0] = parseWorkspace(xml);
-            } catch (Throwable t) {
-                out[0] = new ZaFridaWorkspaceConfig();
-            }
-        });
-        return out[0] != null ? out[0] : new ZaFridaWorkspaceConfig();
+        VirtualFile base = project.getBaseDir();
+        if (base == null) {
+            return new ZaFridaWorkspaceConfig();
+        }
+        VirtualFile file = base.findChild(ZaFridaProjectFiles.WORKSPACE_FILE);
+        if (file == null) {
+            return new ZaFridaWorkspaceConfig();
+        }
+        try {
+            String xml = VfsUtilCore.loadText(file);
+            return parseWorkspace(xml);
+        } catch (Throwable t) {
+            return new ZaFridaWorkspaceConfig();
+        }
     }
 
     /**
@@ -60,16 +60,19 @@ public final class ZaFridaProjectStorage {
      */
     public void saveWorkspace(@NotNull Project project, @NotNull ZaFridaWorkspaceConfig cfg) {
         VirtualFile base = project.getBaseDir();
-        if (base == null) return;
-        WriteCommandAction.runWriteCommandAction(project, () ->
-                SlowOperations.allowSlowOperations(() -> {
-                    try {
-                        VirtualFile file = base.findChild(ZaFridaProjectFiles.WORKSPACE_FILE);
-                        if (file == null) file = base.createChildData(this, ZaFridaProjectFiles.WORKSPACE_FILE);
-                        VfsUtil.saveText(file, toWorkspaceXml(cfg));
-                    } catch (Throwable ignore) {}
-                })
-        );
+        if (base == null) {
+            return;
+        }
+        WriteCommandAction.runWriteCommandAction(project, () -> {
+            try {
+                VirtualFile file = base.findChild(ZaFridaProjectFiles.WORKSPACE_FILE);
+                if (file == null) {
+                    file = base.createChildData(this, ZaFridaProjectFiles.WORKSPACE_FILE);
+                }
+                VfsUtil.saveText(file, toWorkspaceXml(cfg));
+            } catch (Throwable ignore) {
+            }
+        });
     }
 
     /**
@@ -79,33 +82,23 @@ public final class ZaFridaProjectStorage {
      * @return 项目配置
      */
     public @NotNull ZaFridaProjectConfig loadProjectConfig(@NotNull Project project, @NotNull VirtualFile fridaProjectDir) {
-        final ZaFridaProjectConfig[] out = new ZaFridaProjectConfig[1];
-        SlowOperations.allowSlowOperations(() -> {
-            VirtualFile f = fridaProjectDir.findChild(ZaFridaProjectFiles.PROJECT_FILE);
-            if (f == null) {
-                ZaFridaProjectConfig c = new ZaFridaProjectConfig();
-                c.name = fridaProjectDir.getName();
-                c.mainScript = ZaFridaProjectFiles.defaultMainScriptName(c.name);
-                // platform 由目录路径推断或由 manager 传入覆盖
-                out[0] = c;
-                return;
-            }
-            try {
-                String xml = VfsUtilCore.loadText(f);
-                out[0] = parseProject(xml);
-            } catch (Throwable t) {
-                ZaFridaProjectConfig c = new ZaFridaProjectConfig();
-                c.name = fridaProjectDir.getName();
-                c.mainScript = ZaFridaProjectFiles.defaultMainScriptName(c.name);
-                out[0] = c;
-            }
-        });
-
-        if (out[0] != null) return out[0];
-        ZaFridaProjectConfig c = new ZaFridaProjectConfig();
-        c.name = fridaProjectDir.getName();
-        c.mainScript = ZaFridaProjectFiles.defaultMainScriptName(c.name);
-        return c;
+        VirtualFile f = fridaProjectDir.findChild(ZaFridaProjectFiles.PROJECT_FILE);
+        if (f == null) {
+            ZaFridaProjectConfig c = new ZaFridaProjectConfig();
+            c.name = fridaProjectDir.getName();
+            c.mainScript = ZaFridaProjectFiles.defaultMainScriptName(c.name);
+            // platform 由目录路径推断或由 manager 传入覆盖
+            return c;
+        }
+        try {
+            String xml = VfsUtilCore.loadText(f);
+            return parseProject(xml);
+        } catch (Throwable t) {
+            ZaFridaProjectConfig c = new ZaFridaProjectConfig();
+            c.name = fridaProjectDir.getName();
+            c.mainScript = ZaFridaProjectFiles.defaultMainScriptName(c.name);
+            return c;
+        }
     }
 
     /**
@@ -115,15 +108,16 @@ public final class ZaFridaProjectStorage {
      * @param cfg 项目配置
      */
     public void saveProjectConfig(@NotNull Project project, @NotNull VirtualFile fridaProjectDir, @NotNull ZaFridaProjectConfig cfg) {
-        WriteCommandAction.runWriteCommandAction(project, () ->
-                SlowOperations.allowSlowOperations(() -> {
-                    try {
-                        VirtualFile f = fridaProjectDir.findChild(ZaFridaProjectFiles.PROJECT_FILE);
-                        if (f == null) f = fridaProjectDir.createChildData(this, ZaFridaProjectFiles.PROJECT_FILE);
-                        VfsUtil.saveText(f, toProjectXml(cfg));
-                    } catch (Throwable ignore) {}
-                })
-        );
+        WriteCommandAction.runWriteCommandAction(project, () -> {
+            try {
+                VirtualFile f = fridaProjectDir.findChild(ZaFridaProjectFiles.PROJECT_FILE);
+                if (f == null) {
+                    f = fridaProjectDir.createChildData(this, ZaFridaProjectFiles.PROJECT_FILE);
+                }
+                VfsUtil.saveText(f, toProjectXml(cfg));
+            } catch (Throwable ignore) {
+            }
+        });
     }
 
     /**
@@ -266,13 +260,14 @@ public final class ZaFridaProjectStorage {
      * @param cfg 工作区配置
      */
     public void saveWorkspaceNoWriteAction(@NotNull VirtualFile baseDir, @NotNull ZaFridaWorkspaceConfig cfg) {
-        SlowOperations.allowSlowOperations(() -> {
-            try {
-                VirtualFile file = baseDir.findChild(ZaFridaProjectFiles.WORKSPACE_FILE);
-                if (file == null) file = baseDir.createChildData(this, ZaFridaProjectFiles.WORKSPACE_FILE);
-                VfsUtil.saveText(file, toWorkspaceXml(cfg));
-            } catch (Throwable ignore) {}
-        });
+        try {
+            VirtualFile file = baseDir.findChild(ZaFridaProjectFiles.WORKSPACE_FILE);
+            if (file == null) {
+                file = baseDir.createChildData(this, ZaFridaProjectFiles.WORKSPACE_FILE);
+            }
+            VfsUtil.saveText(file, toWorkspaceXml(cfg));
+        } catch (Throwable ignore) {
+        }
     }
 
     // 仅在外层已经处于 write-action 时调用
@@ -282,13 +277,14 @@ public final class ZaFridaProjectStorage {
      * @param cfg 项目配置
      */
     public void saveProjectConfigNoWriteAction(@NotNull VirtualFile fridaProjectDir, @NotNull ZaFridaProjectConfig cfg) {
-        SlowOperations.allowSlowOperations(() -> {
-            try {
-                VirtualFile f = fridaProjectDir.findChild(ZaFridaProjectFiles.PROJECT_FILE);
-                if (f == null) f = fridaProjectDir.createChildData(this, ZaFridaProjectFiles.PROJECT_FILE);
-                VfsUtil.saveText(f, toProjectXml(cfg));
-            } catch (Throwable ignore) {}
-        });
+        try {
+            VirtualFile f = fridaProjectDir.findChild(ZaFridaProjectFiles.PROJECT_FILE);
+            if (f == null) {
+                f = fridaProjectDir.createChildData(this, ZaFridaProjectFiles.PROJECT_FILE);
+            }
+            VfsUtil.saveText(f, toProjectXml(cfg));
+        } catch (Throwable ignore) {
+        }
     }
 
 }

@@ -58,10 +58,14 @@ public final class RunFridaJsAction extends AnAction {
     @Override
     public void actionPerformed(@NotNull AnActionEvent e) {
         Project project = e.getProject();
-        if (project == null) return;
+        if (project == null) {
+            return;
+        }
 
         VirtualFile script = resolveScriptFile(e);
-        if (script == null || script.isDirectory() || !isJsFile(script)) return;
+        if (script == null || script.isDirectory() || !isJsFile(script)) {
+            return;
+        }
 
         Editor editor = e.getData(CommonDataKeys.EDITOR);
         if (editor != null) {
@@ -70,26 +74,39 @@ public final class RunFridaJsAction extends AnAction {
 
         ZaFridaProjectManager pm = project.getService(ZaFridaProjectManager.class);
         ZaFridaFridaProject previous = pm.getActiveProject();
-        VirtualFile projectDir = findFridaProjectDir(project, script);
-        if (projectDir == null) {
-            ZaFridaNotifier.warn(project, "ZAFrida", "No Frida project found for this script");
-            return;
-        }
 
-        ZaFridaFridaProject target = pm.findProjectByDir(projectDir);
-        if (target == null) {
-            target = pm.registerExistingProject(projectDir, true);
-            if (target == null) {
-                ZaFridaNotifier.warn(project, "ZAFrida", "Frida project is not under IDE root");
+        ApplicationManager.getApplication().executeOnPooledThread(() -> {
+            VirtualFile projectDir = findFridaProjectDir(project, script);
+            if (projectDir == null) {
+                ApplicationManager.getApplication().invokeLater(() ->
+                        ZaFridaNotifier.warn(project, "ZAFrida", "No Frida project found for this script"));
                 return;
             }
-        }
 
-        boolean switching = previous == null || !previous.equals(target);
-        if (!target.equals(pm.getActiveProject())) {
-            pm.setActiveProject(target);
-        }
+            pm.findProjectByDirAsync(projectDir, target -> {
+                if (target == null) {
+                    pm.registerExistingProjectAsync(projectDir, true, loaded -> {
+                        if (loaded == null) {
+                            ZaFridaNotifier.warn(project, "ZAFrida", "Frida project is not under IDE root");
+                            return;
+                        }
+                        boolean switching = previous == null || !previous.equals(loaded);
+                        activateAndRun(project, script, switching);
+                    });
+                    return;
+                }
 
+                boolean switching = previous == null || !previous.equals(target);
+                if (!target.equals(pm.getActiveProject())) {
+                    pm.setActiveProjectAsync(target, () -> activateAndRun(project, script, switching));
+                } else {
+                    activateAndRun(project, script, switching);
+                }
+            });
+        });
+    }
+
+    private void activateAndRun(@NotNull Project project, @NotNull VirtualFile script, boolean switching) {
         ToolWindow toolWindow = ToolWindowManager.getInstance(project).getToolWindow("ZAFrida");
         if (toolWindow == null) {
             ZaFridaNotifier.warn(project, "ZAFrida", "ZAFrida tool window not available");
