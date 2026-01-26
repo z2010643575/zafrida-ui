@@ -335,7 +335,7 @@ public final class ZaFridaProjectSettingsDialog extends DialogWrapper {
         }
         projectInfoLabel.setIcon(ZaFridaIcons.forPlatform(activeProject.getPlatform()));
         projectInfoLabel.setText(activeProject.getName());
-        projectInfoLabel.setToolTipText("Platform: " + activeProject.getPlatform().name());
+        projectInfoLabel.setToolTipText(String.format("Platform: %s", activeProject.getPlatform().name()));
     }
 
     /**
@@ -374,8 +374,8 @@ public final class ZaFridaProjectSettingsDialog extends DialogWrapper {
             } catch (Throwable t) {
                 ApplicationManager.getApplication().invokeLater(() -> {
                     refreshTargetsBtn.setEnabled(true);
-                    logError("[ZAFrida] Load targets failed: " + t.getMessage());
-                    Messages.showWarningDialog(project, "Load targets failed: " + t.getMessage(), "ZAFrida");
+                    logError(String.format("[ZAFrida] Load targets failed: %s", t.getMessage()));
+                    Messages.showWarningDialog(project, String.format("Load targets failed: %s", t.getMessage()), "ZAFrida");
                 }, modality);
             }
         });
@@ -472,10 +472,10 @@ public final class ZaFridaProjectSettingsDialog extends DialogWrapper {
         FridaConnectionMode mode = (FridaConnectionMode) connectionModeCombo.getSelectedItem();
         if (mode == FridaConnectionMode.REMOTE || mode == FridaConnectionMode.GADGET) {
             HostPort hostPort = resolveHostPortForSave();
-            String host = hostPort.host + ":" + hostPort.port;
+            String host = String.format("%s:%s", hostPort.host, hostPort.port);
             String type = mode == FridaConnectionMode.GADGET ? "gadget" : "remote";
             String name = mode == FridaConnectionMode.GADGET ? "Gadget" : "Remote";
-            return new FridaDevice(type + ":" + host, type, name, FridaDeviceMode.HOST, host);
+            return new FridaDevice(String.format("%s:%s", type, host), type, name, FridaDeviceMode.HOST, host);
         }
 
         FridaDevice device = deviceSupplier.get();
@@ -487,7 +487,7 @@ public final class ZaFridaProjectSettingsDialog extends DialogWrapper {
             ZaFridaProjectConfig cfg = activeProjectConfig;
             if (cfg != null) {
                 if (ZaStrUtil.isNotBlank(cfg.lastDeviceHost)) {
-                    return new FridaDevice("remote:" + cfg.lastDeviceHost, "remote", "Remote", FridaDeviceMode.HOST, cfg.lastDeviceHost);
+                    return new FridaDevice(String.format("remote:%s", cfg.lastDeviceHost), "remote", "Remote", FridaDeviceMode.HOST, cfg.lastDeviceHost);
                 }
                 if (ZaStrUtil.isNotBlank(cfg.lastDeviceId)) {
                     return new FridaDevice(cfg.lastDeviceId, "device", cfg.lastDeviceId, FridaDeviceMode.DEVICE_ID, null);

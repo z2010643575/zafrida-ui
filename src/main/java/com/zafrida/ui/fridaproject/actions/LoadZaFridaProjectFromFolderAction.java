@@ -107,7 +107,7 @@ public final class LoadZaFridaProjectFromFolderAction extends AnAction {
 
             pm.findProjectByDirAsync(finalDir, existing -> {
                 if (existing != null) {
-                    ZaFridaNotifier.info(project, "ZAFrida", "Project already loaded: " + existing.getName());
+                    ZaFridaNotifier.info(project, "ZAFrida", String.format("Project already loaded: %s", existing.getName()));
                     activateToolWindow(project);
                     return;
                 }
@@ -121,7 +121,7 @@ public final class LoadZaFridaProjectFromFolderAction extends AnAction {
                     pm.ensureDefaultMainScriptAsync(loaded, () -> {
                         project.getMessageBus().syncPublisher(ZaFridaProjectManager.TOPIC)
                                 .onActiveProjectChanged(pm.getActiveProject());
-                        ZaFridaNotifier.info(project, "ZAFrida", "Loaded Frida project: " + loaded.getName());
+                        ZaFridaNotifier.info(project, "ZAFrida", String.format("Loaded Frida project: %s", loaded.getName()));
                         activateToolWindow(project);
                     });
                 });

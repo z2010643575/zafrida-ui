@@ -38,7 +38,7 @@ public final class TemplateScriptManipulator {
      * @return 开始标记字符串
      */
     private static @NotNull String beginMarker(@NotNull String id) {
-        return "//== ZAFrida:TEMPLATE:" + id + ":BEGIN ==";
+        return String.format("//== ZAFrida:TEMPLATE:%s:BEGIN ==", id);
     }
 
     /**
@@ -47,7 +47,7 @@ public final class TemplateScriptManipulator {
      * @return 结束标记字符串
      */
     private static @NotNull String endMarker(@NotNull String id) {
-        return "//== ZAFrida:TEMPLATE:" + id + ":END ==";
+        return String.format("//== ZAFrida:TEMPLATE:%s:END ==", id);
     }
 
     /**
@@ -86,7 +86,7 @@ public final class TemplateScriptManipulator {
         if (text.contains(TEMPLATES_BEGIN) && text.contains(TEMPLATES_END)) {
             return;
         }
-        String appendix = "\n" + TEMPLATES_BEGIN + "\n" + TEMPLATES_END + "\n";
+        String appendix = String.format("\n%s\n%s\n", TEMPLATES_BEGIN, TEMPLATES_END);
         document.insertString(document.getTextLength(), appendix);
     }
 
@@ -130,9 +130,9 @@ public final class TemplateScriptManipulator {
         String e = endMarker(template.getId());
         String content = template.getContent().stripTrailing();
         if (enabled) {
-            return "\n" + b + "\n" + content + "\n" + e + "\n";
+            return String.format("\n%s\n%s\n%s\n", b, content, e);
         }
-        return "\n" + b + "\n/*\n" + content + "\n*/\n" + e + "\n";
+        return String.format("\n%s\n/*\n%s\n*/\n%s\n", b, content, e);
     }
 
     /**

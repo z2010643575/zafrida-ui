@@ -37,6 +37,6 @@ public final class DeviceCellRenderer extends ColoredListCellRenderer<FridaDevic
         append(value.getName(), SimpleTextAttributes.REGULAR_ATTRIBUTES);
         append("  ");
         String suffix = value.getHost() != null ? value.getHost() : value.getId();
-        append("(" + suffix + ")", SimpleTextAttributes.GRAYED_ATTRIBUTES);
+        append(String.format("(%s)", suffix), SimpleTextAttributes.GRAYED_ATTRIBUTES);
     }
 }

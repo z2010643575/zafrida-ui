@@ -56,11 +56,7 @@ public final class EnvironmentDoctorDialog extends DialogWrapper {
         JPanel root = new JPanel(new BorderLayout(0, JBUI.scale(8)));
         root.setBorder(JBUI.Borders.empty(10));
 
-        JBLabel header = new JBLabel(
-                "<html><b>Environment Doctor</b><br/>" +
-                        "<small style='color:gray'>Check dependencies step by step, recommended for first run. " +
-                        "(逐项检查环境依赖，建议首次使用先跑一遍。)</small></html>"
-        );
+        JBLabel header = new JBLabel(buildHeaderHtml());
 
         JPanel listPanel = new JPanel();
         listPanel.setLayout(new BoxLayout(listPanel, BoxLayout.Y_AXIS));
@@ -166,12 +162,19 @@ public final class EnvironmentDoctorDialog extends DialogWrapper {
 
         String text;
         if (runningCount > 0) {
-            text = "Running... Completed " + success + " items (诊断中... 已完成 " + success + " 项)";
+            text = String.format("Running... Completed %s items (诊断中... 已完成 %s 项)", success, success);
         } else if (pending > 0) {
-            text = "Running... Completed " + success + " items (诊断中... 已完成 " + success + " 项)";
+            text = String.format("Running... Completed %s items (诊断中... 已完成 %s 项)", success, success);
         } else {
-            text = "Done: Success " + success + ", Failed " + failed + ", Skipped " + skipped +
-                    " (完成：成功 " + success + "，失败 " + failed + "，跳过 " + skipped + ")";
+            text = String.format(
+                    "Done: Success %s, Failed %s, Skipped %s (完成：成功 %s，失败 %s，跳过 %s)",
+                    success,
+                    failed,
+                    skipped,
+                    success,
+                    failed,
+                    skipped
+            );
         }
         summaryLabel.setText(text);
     }
@@ -188,8 +191,12 @@ public final class EnvironmentDoctorDialog extends DialogWrapper {
             ZaFridaNotifier.warn(
                     project,
                     "Environment Doctor",
-                    "Found " + failed + " issues, please check details. (发现 " + failed + " 个问题，请查看详情。)"
+                    String.format("Found %s issues, please check details. (发现 %s 个问题，请查看详情。)", failed, failed)
             );
         }
+    }
+
+    private static @NotNull String buildHeaderHtml() {
+        return "<html><b>Environment Doctor</b><br/><small style='color:gray'>Check dependencies step by step, recommended for first run. (逐项检查环境依赖，建议首次使用先跑一遍。)</small></html>";
     }
 }

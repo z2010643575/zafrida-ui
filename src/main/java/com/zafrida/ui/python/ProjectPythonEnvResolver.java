@@ -66,7 +66,7 @@ public final class ProjectPythonEnvResolver {
             // We only support local filesystem paths here.
             // 此处仅支持本地文件系统路径。
             if (homePath.contains("://")) {
-                LOG.info("Project python SDK looks remote, skip env patch: " + homePath);
+                LOG.info(String.format("Project python SDK looks remote, skip env patch: %s", homePath));
                 return null;
             }
 
@@ -307,9 +307,9 @@ public final class ProjectPythonEnvResolver {
 
         if (windows) {
             String lower = baseName.toLowerCase(Locale.ROOT);
-            if (!lower.endsWith(".exe")) out.add(baseName + ".exe");
-            if (!lower.endsWith(".cmd")) out.add(baseName + ".cmd");
-            if (!lower.endsWith(".bat")) out.add(baseName + ".bat");
+            if (!lower.endsWith(".exe")) out.add(String.format("%s.exe", baseName));
+            if (!lower.endsWith(".cmd")) out.add(String.format("%s.cmd", baseName));
+            if (!lower.endsWith(".bat")) out.add(String.format("%s.bat", baseName));
         }
         return out;
     }

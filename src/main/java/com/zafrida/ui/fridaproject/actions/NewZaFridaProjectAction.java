@@ -43,7 +43,7 @@ public final class NewZaFridaProjectAction extends AnAction {
         ZaFridaPlatform platform = dialog.getPlatform();
         ZaFridaProjectManager pm = project.getService(ZaFridaProjectManager.class);
         pm.createAndActivateAsync(name, platform,
-                created -> ZaFridaNotifier.info(project, "ZAFrida", "Created project: " + created.getName()),
-                t -> ZaFridaNotifier.error(project, "ZAFrida", "Create project failed: " + t.getMessage()));
+                created -> ZaFridaNotifier.info(project, "ZAFrida", String.format("Created project: %s", created.getName())),
+                t -> ZaFridaNotifier.error(project, "ZAFrida", String.format("Create project failed: %s", t.getMessage())));
     }
 }

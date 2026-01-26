@@ -86,7 +86,7 @@ public final class ZaFridaSessionService implements Disposable {
         // show command line
         // 显示命令行
         String cmdLine = fridaCliService.buildRunCommandLine(project, config).getCommandLineString();
-        info.accept("[ZAFrida] Command: " + cmdLine);
+        info.accept(String.format("[ZAFrida] Command: %s", cmdLine));
 
         ProcessHandler handler = fridaCliService.createRunProcessHandler(project, config);
 
@@ -102,7 +102,7 @@ public final class ZaFridaSessionService implements Disposable {
             @Override
             public void processTerminated(@NotNull ProcessEvent event) {
                 if (finalWriter != null) {
-                    finalWriter.append("\n[ZAFrida] Process terminated (exitCode=" + event.getExitCode() + ")\n");
+                    finalWriter.append(String.format("\n[ZAFrida] Process terminated (exitCode=%s)\n", event.getExitCode()));
                     finalWriter.close();
                 }
                 synchronized (ZaFridaSessionService.this) {

@@ -106,9 +106,9 @@ public final class EnvironmentDoctorItemPanel extends JPanel {
         if (ZaStrUtil.isNotBlank(message)) {
             if (isHtml(message)) {
                 String body = stripHtmlWrapper(message);
-                finalText = "<html>" + statusText + ": " + body + "</html>";
+                finalText = String.format("<html>%s: %s</html>", statusText, body);
             } else {
-                finalText = statusText + ": " + message;
+                finalText = String.format("%s: %s", statusText, message);
             }
         } else {
             finalText = statusText;
@@ -165,7 +165,7 @@ public final class EnvironmentDoctorItemPanel extends JPanel {
     }
 
     private String wrapSmall(@NotNull String text) {
-        return "<html><small style='color:gray'>" + text + "</small></html>";
+        return String.format("<html><small style='color:gray'>%s</small></html>", text);
     }
 
     private boolean isHtml(@NotNull String text) {

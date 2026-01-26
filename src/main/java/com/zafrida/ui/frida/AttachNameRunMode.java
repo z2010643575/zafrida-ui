@@ -35,6 +35,6 @@ public final class AttachNameRunMode implements FridaRunMode {
      */
     @Override
     public String toString() {
-        return "Attach(-N " + name + ")";
+        return String.format("Attach(-N %s)", name);
     }
 }

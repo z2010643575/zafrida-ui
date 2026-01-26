@@ -103,9 +103,13 @@ public final class FridaDevice {
      */
     public @NotNull String displayText() {
         if (mode == FridaDeviceMode.HOST) {
-            return "[" + type + "] " + name + " (" + (host != null ? host : "?") + ")";
+            String displayHost = host;
+            if (displayHost == null) {
+                displayHost = "?";
+            }
+            return String.format("[%s] %s (%s)", type, name, displayHost);
         }
-        return "[" + type + "] " + name + " (" + id + ")";
+        return String.format("[%s] %s (%s)", type, name, id);
     }
 
     /**

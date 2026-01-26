@@ -39,23 +39,23 @@ public final class AdbService {
                            @NotNull Consumer<String> warn,
                            @NotNull Runnable onDone) {
         GeneralCommandLine cmd = buildForwardCommand(port);
-        info.accept("[ZAFrida] ADB forward: " + cmd.getCommandLineString());
+        info.accept(String.format("[ZAFrida] ADB forward: %s", cmd.getCommandLineString()));
 
         runAsync(cmd, result -> {
             if (result.exitCode != 0) {
-                warn.accept("[ZAFrida] ADB forward failed (exitCode=" + result.exitCode + ")");
+                warn.accept(String.format("[ZAFrida] ADB forward failed (exitCode=%s)", result.exitCode));
             } else {
-                info.accept("[ZAFrida] ADB forward ready on port " + port);
+                info.accept(String.format("[ZAFrida] ADB forward ready on port %s", port));
             }
             if (ZaStrUtil.isNotBlank(result.stdout)) {
-                info.accept("[ZAFrida] " + result.stdout);
+                info.accept(String.format("[ZAFrida] %s", result.stdout));
             }
             if (ZaStrUtil.isNotBlank(result.stderr)) {
-                warn.accept("[ZAFrida] " + result.stderr);
+                warn.accept(String.format("[ZAFrida] %s", result.stderr));
             }
             onDone.run();
         }, throwable -> {
-            warn.accept("[ZAFrida] ADB forward failed: " + throwable.getMessage());
+            warn.accept(String.format("[ZAFrida] ADB forward failed: %s", throwable.getMessage()));
             onDone.run();
         });
     }
@@ -72,20 +72,20 @@ public final class AdbService {
                           @NotNull Consumer<String> info,
                           @NotNull Consumer<String> error) {
         GeneralCommandLine cmd = buildForceStopCommand(packageName, deviceId);
-        info.accept("[ZAFrida] Force stop command: " + cmd.getCommandLineString());
+        info.accept(String.format("[ZAFrida] Force stop command: %s", cmd.getCommandLineString()));
 
         runAsync(cmd, result -> {
             if (result.exitCode == 0) {
-                info.accept("[ZAFrida] Force stopped: " + packageName);
+                info.accept(String.format("[ZAFrida] Force stopped: %s", packageName));
                 if (ZaStrUtil.isNotBlank(result.stdout)) {
                     info.accept(result.stdout);
                 }
             } else {
                 String detail = ZaStrUtil.isNotBlank(result.stderr) ? result.stderr : result.stdout;
                 if (ZaStrUtil.isBlank(detail)) detail = "unknown error";
-                error.accept("[ZAFrida] Force stop failed (exit=" + result.exitCode + "): " + detail);
+                error.accept(String.format("[ZAFrida] Force stop failed (exit=%s): %s", result.exitCode, detail));
             }
-        }, throwable -> error.accept("[ZAFrida] Force stop failed: " + throwable.getMessage()));
+        }, throwable -> error.accept(String.format("[ZAFrida] Force stop failed: %s", throwable.getMessage())));
     }
 
     /**
@@ -100,24 +100,24 @@ public final class AdbService {
                         @NotNull Consumer<String> info,
                         @NotNull Consumer<String> error) {
         GeneralCommandLine cmd = buildOpenAppCommand(packageName, deviceId);
-        info.accept("[ZAFrida] Open app command: " + cmd.getCommandLineString());
+        info.accept(String.format("[ZAFrida] Open app command: %s", cmd.getCommandLineString()));
 
         runAsync(cmd, result -> {
             if (result.exitCode == 0) {
-                info.accept("[ZAFrida] Opened app: " + packageName);
+                info.accept(String.format("[ZAFrida] Opened app: %s", packageName));
                 if (ZaStrUtil.isNotBlank(result.stdout)) {
                     info.accept(result.stdout);
                 }
             } else {
                 String detail = ZaStrUtil.isNotBlank(result.stderr) ? result.stderr : result.stdout;
                 if (ZaStrUtil.isBlank(detail)) detail = "unknown error";
-                error.accept("[ZAFrida] Open app failed (exit=" + result.exitCode + "): " + detail);
+                error.accept(String.format("[ZAFrida] Open app failed (exit=%s): %s", result.exitCode, detail));
             }
-        }, throwable -> error.accept("[ZAFrida] Open app failed: " + throwable.getMessage()));
+        }, throwable -> error.accept(String.format("[ZAFrida] Open app failed: %s", throwable.getMessage())));
     }
 
     private static @NotNull GeneralCommandLine buildForwardCommand(int port) {
-        String tcp = "tcp:" + port;
+        String tcp = String.format("tcp:%s", port);
         return new GeneralCommandLine("adb", "forward", tcp, tcp)
                 .withCharset(StandardCharsets.UTF_8);
     }

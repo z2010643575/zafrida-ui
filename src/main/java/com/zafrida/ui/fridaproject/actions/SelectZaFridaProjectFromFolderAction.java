@@ -108,7 +108,7 @@ public final class SelectZaFridaProjectFromFolderAction extends AnAction {
                 }
 
                 pm.setActiveProjectAsync(target, () -> {
-                    ZaFridaNotifier.info(project, "ZAFrida", "Selected Frida project: " + target.getName());
+                    ZaFridaNotifier.info(project, "ZAFrida", String.format("Selected Frida project: %s", target.getName()));
                     activateToolWindow(project);
                 });
             });

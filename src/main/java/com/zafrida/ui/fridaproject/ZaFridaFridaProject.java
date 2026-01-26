@@ -64,7 +64,7 @@ public final class ZaFridaFridaProject {
      */
     @Override
     public String toString() {
-        return name + " (" + relativeDir + ")";
+        return String.format("%s (%s)", name, relativeDir);
     }
 
     /**

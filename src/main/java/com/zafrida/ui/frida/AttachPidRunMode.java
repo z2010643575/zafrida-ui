@@ -34,6 +34,6 @@ public final class AttachPidRunMode implements FridaRunMode {
      */
     @Override
     public String toString() {
-        return "Attach(-p " + pid + ")";
+        return String.format("Attach(-p %s)", pid);
     }
 }

@@ -277,7 +277,7 @@ public final class ZaFridaProjectManager {
 
         // 构造相对目录路径
         String rootFolder = platform.rootFolderName();
-        String relDir = rootFolder + "/" + safeName;
+        String relDir = String.format("%s/%s", rootFolder, safeName);
 
         // 先构造对象（不触发写）
         ZaFridaFridaProject fp = new ZaFridaFridaProject(safeName, platform, relDir);
@@ -784,7 +784,7 @@ public final class ZaFridaProjectManager {
         }
 
         String leaf = targetLeaf(targetId);
-        String autoName = leaf + ".js";
+        String autoName = String.format("%s.js", leaf);
 
         // 仅在仍是默认 agent.js 时自动切换
         if (ZaFridaProjectFiles.DEFAULT_MAIN_SCRIPT.equals(oldMain) && !autoName.equals(oldMain)) {

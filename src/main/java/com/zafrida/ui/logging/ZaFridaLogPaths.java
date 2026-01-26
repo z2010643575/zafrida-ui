@@ -75,9 +75,9 @@ public final class ZaFridaLogPaths {
         if (ZaStrUtil.isNotBlank(packageName)) {
             // 清理包名中的非法字符
             String safePackageName = sanitizeFileName(packageName);
-            name = "zafrida_" + safePackageName + "_" + timestamp + ".log";
+            name = String.format("zafrida_%s_%s.log", safePackageName, timestamp);
         } else {
-            name = "zafrida_" + timestamp + ".log";
+            name = String.format("zafrida_%s.log", timestamp);
         }
 
         Path file = dir.resolve(name);

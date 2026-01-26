@@ -37,6 +37,6 @@ public final class SpawnRunMode implements FridaRunMode {
      */
     @Override
     public String toString() {
-        return "Spawn(-f " + identifier + ")";
+        return String.format("Spawn(-f %s)", identifier);
     }
 }

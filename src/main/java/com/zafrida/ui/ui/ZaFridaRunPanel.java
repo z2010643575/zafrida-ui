@@ -77,7 +77,7 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
 
     private static final String PLUGIN_ID = "com.zafrida.ui";
     private static final String MARKETPLACE_PLUGIN_DETAILS_URL =
-            "https://plugins.jetbrains.com/plugins/list?pluginId=" + PLUGIN_ID;
+            String.format("https://plugins.jetbrains.com/plugins/list?pluginId=%s", PLUGIN_ID);
 
     /** IDE 项目实例 */
     private final @NotNull Project project;
@@ -292,7 +292,7 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
             if (!updateAvailable) return;
             ApplicationManager.getApplication().invokeLater(() -> {
                 updateLink.setVisible(true);
-                updateLink.setToolTipText("Latest version: " + latestVersion);
+                updateLink.setToolTipText(String.format("Latest version: %s", latestVersion));
             });
         });
     }
@@ -378,7 +378,7 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
                     .getState();
             String defHost = ZaFridaNetUtil.defaultHost(st.defaultRemoteHost);
             int defPort = ZaFridaNetUtil.defaultPort(st.defaultRemotePort);
-            String initial = defHost + ":" + defPort;
+            String initial = String.format("%s:%s", defHost, defPort);
 
             String host = Messages.showInputDialog(this, "host:port", "Add Frida Remote Host", null, initial, null);
             if (host == null) return;
@@ -543,14 +543,14 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
             if (mainScript != null && !mainScript.isDirectory()) {
                 setRunScriptFile(mainScript);
             } else if (ZaStrUtil.isNotBlank(cfg.mainScript)) {
-                runConsolePanel.warn("[ZAFrida] Main script not found in project: " + cfg.mainScript);
+                runConsolePanel.warn(String.format("[ZAFrida] Main script not found in project: %s", cfg.mainScript));
             }
 
             VirtualFile attachScript = state.getAttachScriptFile();
             if (attachScript != null && !attachScript.isDirectory()) {
                 setAttachScriptFile(attachScript);
             } else if (ZaStrUtil.isNotBlank(cfg.attachScript)) {
-                runConsolePanel.warn("[ZAFrida] Attach script not found in project: " + cfg.attachScript);
+                runConsolePanel.warn(String.format("[ZAFrida] Attach script not found in project: %s", cfg.attachScript));
             } else {
                 attachScriptFile = null;
                 attachScriptField.setText("");
@@ -571,7 +571,7 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
             return;
         }
         projectTypeIcon.setIcon(ZaFridaIcons.forPlatform(active.getPlatform()));
-        projectTypeIcon.setToolTipText("Platform: " + active.getPlatform().name());
+        projectTypeIcon.setToolTipText(String.format("Platform: %s", active.getPlatform().name()));
     }
 
     /**
@@ -674,10 +674,10 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
         fridaProjectManager.createAndActivateAsync(name, platform, created -> {
             reloadFridaProjectsIntoUi();
             applyActiveFridaProjectToUi(created);
-            runConsolePanel.info("[ZAFrida] Created project: " + created.getName() + " (" + created.getRelativeDir() + ")");
+            runConsolePanel.info(String.format("[ZAFrida] Created project: %s (%s)", created.getName(), created.getRelativeDir()));
         }, t -> {
-            runConsolePanel.error("[ZAFrida] Create project failed: " + t.getMessage());
-            ZaFridaNotifier.error(project, "ZAFrida", "Create project failed: " + t.getMessage());
+            runConsolePanel.error(String.format("[ZAFrida] Create project failed: %s", t.getMessage()));
+            ZaFridaNotifier.error(project, "ZAFrida", String.format("Create project failed: %s", t.getMessage()));
         });
     }
 
@@ -975,7 +975,7 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
             if (ZaStrUtil.isBlank(path)) {
                 ZaFridaNotifier.warn(project, "ZAFrida", "No script file selected");
             } else {
-                ZaFridaNotifier.warn(project, "ZAFrida", "Script file not found: " + path.trim());
+                ZaFridaNotifier.warn(project, "ZAFrida", String.format("Script file not found: %s", path.trim()));
             }
             return;
         }
@@ -992,7 +992,7 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
             if (ZaStrUtil.isBlank(path)) {
                 ZaFridaNotifier.warn(project, "ZAFrida", "No attach script file selected");
             } else {
-                ZaFridaNotifier.warn(project, "ZAFrida", "Attach script file not found: " + path.trim());
+                ZaFridaNotifier.warn(project, "ZAFrida", String.format("Attach script file not found: %s", path.trim()));
             }
             return;
         }
@@ -1043,9 +1043,9 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
             return;
         }
 
-        runConsolePanel.info("[ZAFrida] Project Python: " + env.getPythonHome());
+        runConsolePanel.info(String.format("[ZAFrida] Project Python: %s", env.getPythonHome()));
         if (!env.getPathEntries().isEmpty()) {
-            runConsolePanel.info("[ZAFrida] Project PATH prepend: " + String.join(File.pathSeparator, env.getPathEntries()));
+            runConsolePanel.info(String.format("[ZAFrida] Project PATH prepend: %s", String.join(File.pathSeparator, env.getPathEntries())));
         }
 
         ZaFridaSettingsState st = ApplicationManager.getApplication().getService(ZaFridaSettingsService.class).getState();
@@ -1054,15 +1054,15 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
         String frida = ProjectPythonEnvResolver.findTool(env, st.fridaExecutable);
 
         if (ls != null) {
-            runConsolePanel.info("[ZAFrida] Resolved frida-ls-devices: " + ls);
+            runConsolePanel.info(String.format("[ZAFrida] Resolved frida-ls-devices: %s", ls));
         } else {
             runConsolePanel.warn("[ZAFrida] frida-ls-devices not found in project interpreter; will fallback to system PATH if available.");
         }
         if (ps != null) {
-            runConsolePanel.info("[ZAFrida] Resolved frida-ps: " + ps);
+            runConsolePanel.info(String.format("[ZAFrida] Resolved frida-ps: %s", ps));
         }
         if (frida != null) {
-            runConsolePanel.info("[ZAFrida] Resolved frida: " + frida);
+            runConsolePanel.info(String.format("[ZAFrida] Resolved frida: %s", frida));
         }
     }
 
@@ -1101,7 +1101,7 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
                 List<String> remotes = settingsService.getRemoteHosts();
                 for (String host : remotes) {
                     if (!containsHost(devices, host)) {
-                        devices.add(new FridaDevice("remote:" + host, "remote", "Remote", FridaDeviceMode.HOST, host));
+                        devices.add(new FridaDevice(String.format("remote:%s", host), "remote", "Remote", FridaDeviceMode.HOST, host));
                     }
                 }
 
@@ -1117,7 +1117,7 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
                             type = "remote";
                             name = "Remote";
                         }
-                        devices.add(new FridaDevice(type + ":" + host, type, name, FridaDeviceMode.HOST, host));
+                        devices.add(new FridaDevice(String.format("%s:%s", type, host), type, name, FridaDeviceMode.HOST, host));
                     }
                 }
 
@@ -1132,12 +1132,12 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
                     } finally {
                         updatingDeviceCombo = false;
                     }
-                    runConsolePanel.info("[ZAFrida] Devices loaded: " + devices.size());
+                    runConsolePanel.info(String.format("[ZAFrida] Devices loaded: %s", devices.size()));
                     disableControls(false);
                 });
             } catch (Throwable t) {
                 ApplicationManager.getApplication().invokeLater(() -> {
-                    runConsolePanel.error("[ZAFrida] Load devices failed: " + t.getMessage());
+                    runConsolePanel.error(String.format("[ZAFrida] Load devices failed: %s", t.getMessage()));
                     disableControls(false);
                 });
             }
@@ -1234,7 +1234,7 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
      * @return host:port
      */
     private @NotNull String resolveHostPort(@Nullable ZaFridaProjectConfig cfg) {
-        return resolveRemoteHost(cfg) + ":" + resolveRemotePort(cfg);
+        return String.format("%s:%s", resolveRemoteHost(cfg), resolveRemotePort(cfg));
     }
 
     /**
@@ -1529,10 +1529,10 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
         if (connectionMode == FridaConnectionMode.REMOTE || gadgetMode) {
             String hostValue = resolveRemoteHost(projectConfig);
             int portValue = resolveRemotePort(projectConfig);
-            String host = hostValue + ":" + portValue;
+            String host = String.format("%s:%s", hostValue, portValue);
             String type = gadgetMode ? "gadget" : "remote";
             String name = gadgetMode ? "Gadget" : "Remote";
-            return new FridaDevice(type + ":" + host, type, name, FridaDeviceMode.HOST, host);
+            return new FridaDevice(String.format("%s:%s", type, host), type, name, FridaDeviceMode.HOST, host);
         }
         FridaDevice dev = (FridaDevice) deviceCombo.getSelectedItem();
         if (dev == null) {
@@ -1577,11 +1577,11 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
             session.getProcessHandler().addProcessListener(sessionService.createUiStateListener(this::updateRunningState));
 
             updateRunningState();
-            logFileLabel.setText("Log: " + session.getLogFilePath());
-            console.info("[ZAFrida] Log file: " + session.getLogFilePath());
+            logFileLabel.setText(String.format("Log: %s", session.getLogFilePath()));
+            console.info(String.format("[ZAFrida] Log file: %s", session.getLogFilePath()));
         } catch (Throwable t) {
-            console.error("[ZAFrida] Start failed: " + t.getMessage());
-            ZaFridaNotifier.error(project, "ZAFrida", "Start failed: " + t.getMessage());
+            console.error(String.format("[ZAFrida] Start failed: %s", t.getMessage()));
+            ZaFridaNotifier.error(project, "ZAFrida", String.format("Start failed: %s", t.getMessage()));
         }
     }
 

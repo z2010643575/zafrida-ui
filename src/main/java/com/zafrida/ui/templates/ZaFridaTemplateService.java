@@ -76,7 +76,7 @@ public class ZaFridaTemplateService {
             copyBuiltInTemplates(ANDROID_DIR);
             copyBuiltInTemplates(IOS_DIR);
 
-            LOG.info("Templates initialized at: " + userTemplatesRoot);
+            LOG.info(String.format("Templates initialized at: %s", userTemplatesRoot));
         } catch (IOException e) {
             LOG.error("Failed to initialize templates", e);
         }
@@ -86,7 +86,7 @@ public class ZaFridaTemplateService {
      * 复制内置模板到用户目录
      */
     private void copyBuiltInTemplates(String platform) {
-        String resourcePath = TEMPLATES_RESOURCE_PATH + "/" + platform;
+        String resourcePath = String.format("%s/%s", TEMPLATES_RESOURCE_PATH, platform);
         Path targetDir = userTemplatesRoot.resolve(platform);
 
         try {
@@ -99,16 +99,21 @@ public class ZaFridaTemplateService {
 
                 // 根据开关决定是否覆盖
                 if (FORCE_OVERWRITE_BUILTIN || !Files.exists(targetFile)) {
-                    String content = readResourceFile(resourcePath + "/" + fileName);
+                    String content = readResourceFile(String.format("%s/%s", resourcePath, fileName));
                     if (content != null) {
                         Files.writeString(targetFile, content, StandardCharsets.UTF_8);
-                        LOG.info((FORCE_OVERWRITE_BUILTIN ? "Overwritten" : "Copied") +
-                                " template: " + fileName + " to " + platform);
+                        String action;
+                        if (FORCE_OVERWRITE_BUILTIN) {
+                            action = "Overwritten";
+                        } else {
+                            action = "Copied";
+                        }
+                        LOG.info(String.format("%s template: %s to %s", action, fileName, platform));
                     }
                 }
             }
         } catch (IOException e) {
-            LOG.error("Failed to copy built-in templates for " + platform, e);
+            LOG.error(String.format("Failed to copy built-in templates for %s", platform), e);
         }
     }
 
@@ -121,7 +126,7 @@ public class ZaFridaTemplateService {
         try {
             URL resourceUrl = getClass().getResource(resourcePath);
             if (resourceUrl == null) {
-                LOG.warn("Resource path not found: " + resourcePath);
+                LOG.warn(String.format("Resource path not found: %s", resourcePath));
                 return files;
             }
 
@@ -130,7 +135,9 @@ public class ZaFridaTemplateService {
                 String jarPath = resourceUrl.getPath().substring(5, resourceUrl.getPath().indexOf("!"));
                 try (java.util.jar.JarFile jar = new java.util.jar.JarFile(java.net.URLDecoder.decode(jarPath, StandardCharsets.UTF_8))) {
                     String prefix = resourcePath.startsWith("/") ? resourcePath.substring(1) : resourcePath;
-                    if (!prefix.endsWith("/")) prefix += "/";
+                    if (!prefix.endsWith("/")) {
+                        prefix = String.format("%s/", prefix);
+                    }
 
                     String finalPrefix = prefix;
                     jar.stream()
@@ -153,7 +160,7 @@ public class ZaFridaTemplateService {
                 }
             }
         } catch (Exception e) {
-            LOG.error("Failed to list resource files: " + resourcePath, e);
+            LOG.error(String.format("Failed to list resource files: %s", resourcePath), e);
         }
 
         return files;
@@ -166,12 +173,12 @@ public class ZaFridaTemplateService {
     private String readResourceFile(String resourcePath) {
         try (InputStream is = getClass().getResourceAsStream(resourcePath)) {
             if (is == null) {
-                LOG.warn("Resource not found: " + resourcePath);
+                LOG.warn(String.format("Resource not found: %s", resourcePath));
                 return null;
             }
             return new String(is.readAllBytes(), StandardCharsets.UTF_8);
         } catch (IOException e) {
-            LOG.error("Failed to read resource: " + resourcePath, e);
+            LOG.error(String.format("Failed to read resource: %s", resourcePath), e);
             return null;
         }
     }
@@ -191,7 +198,7 @@ public class ZaFridaTemplateService {
         // 加载自定义模板
         loadTemplatesFromDirectory(userTemplatesRoot.resolve(CUSTOM_DIR), ZaFridaTemplateCategory.CUSTOM);
 
-        LOG.info("Loaded " + cachedTemplates.size() + " templates");
+        LOG.info(String.format("Loaded %s templates", cachedTemplates.size()));
     }
 
     /**
@@ -209,11 +216,11 @@ public class ZaFridaTemplateService {
                                 cachedTemplates.add(template);
                             }
                         } catch (Exception e) {
-                            LOG.warn("Failed to load template: " + p, e);
+                            LOG.warn(String.format("Failed to load template: %s", p), e);
                         }
                     });
         } catch (IOException e) {
-            LOG.error("Failed to list templates in: " + dir, e);
+            LOG.error(String.format("Failed to list templates in: %s", dir), e);
         }
     }
 
@@ -224,7 +231,7 @@ public class ZaFridaTemplateService {
     private ZaFridaTemplate loadTemplateFromFile(Path file, ZaFridaTemplateCategory category) throws IOException {
         String content = Files.readString(file, StandardCharsets.UTF_8);
         String fileName = file.getFileName().toString();
-        String id = category.name().toLowerCase() + "_" + fileName.replace(".js", "");
+        String id = String.format("%s_%s", category.name().toLowerCase(), fileName.replace(".js", ""));
 
         // 解析标题和描述（从文件前两行注释中提取）
         String title = fileName.replace(".js", "").replace("_", " ");
@@ -266,21 +273,21 @@ public class ZaFridaTemplateService {
             return false;
         }
 
-        String fileName = sanitizeFileName(name) + ".js";
+        String fileName = String.format("%s.js", sanitizeFileName(name));
         Path targetFile = userTemplatesRoot.resolve(CUSTOM_DIR).resolve(fileName);
 
         try {
             // 确保内容以标题注释开头
             String finalContent = content;
             if (!content.startsWith("//")) {
-                finalContent = "// " + name + "\n// Custom template\n\n" + content;
+                finalContent = String.format("// %s\n// Custom template\n\n%s", name, content);
             }
 
             Files.writeString(targetFile, finalContent, StandardCharsets.UTF_8);
             reload();
             return true;
         } catch (IOException e) {
-            LOG.error("Failed to add template: " + name, e);
+            LOG.error(String.format("Failed to add template: %s", name), e);
             return false;
         }
     }
@@ -291,7 +298,7 @@ public class ZaFridaTemplateService {
     public boolean updateTemplate(@NotNull ZaFridaTemplate template, String newContent) {
         Path filePath = template.getFilePath();
         if (filePath == null || !Files.exists(filePath)) {
-            LOG.warn("Template file not found: " + template.getId());
+            LOG.warn(String.format("Template file not found: %s", template.getId()));
             return false;
         }
 
@@ -300,7 +307,7 @@ public class ZaFridaTemplateService {
             reload();
             return true;
         } catch (IOException e) {
-            LOG.error("Failed to update template: " + template.getId(), e);
+            LOG.error(String.format("Failed to update template: %s", template.getId()), e);
             return false;
         }
     }
@@ -323,7 +330,7 @@ public class ZaFridaTemplateService {
             reload();
             return true;
         } catch (IOException e) {
-            LOG.error("Failed to delete template: " + template.getId(), e);
+            LOG.error(String.format("Failed to delete template: %s", template.getId()), e);
             return false;
         }
     }

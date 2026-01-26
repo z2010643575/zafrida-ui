@@ -269,13 +269,7 @@ public class ZaFridaProjectConfigurable implements Configurable {
         // Hints
         // 使用提示
         contentPanel.add(Box.createVerticalStrut(16));
-        JBLabel hintLabel2 = new JBLabel(
-                "<html><small style='color:gray'>" +
-                        "• USB: frida -U -f com.example.app -l script.js<br>" +
-                        "• Remote: frida -H 127.0.0.1:14725 -f com.example.app -l script.js<br>" +
-                        "• Gadget: frida -H 127.0.0.1:14725 -F -l script.js" +
-                        "</small></html>"
-        );
+        JBLabel hintLabel2 = new JBLabel(buildCommandHintHtml());
         contentPanel.add(hintLabel2);
 
         mainPanel.add(new JBScrollPane(contentPanel), BorderLayout.CENTER);
@@ -288,6 +282,15 @@ public class ZaFridaProjectConfigurable implements Configurable {
         JBLabel label = new JBLabel(text);
         label.setFont(label.getFont().deriveFont(Font.BOLD, 13f));
         return label;
+    }
+
+    private static @NotNull String buildCommandHintHtml() {
+        return String.format(
+                "<html><small style='color:gray'>%s%s%s</small></html>",
+                "• USB: frida -U -f com.example.app -l script.js<br>",
+                "• Remote: frida -H 127.0.0.1:14725 -f com.example.app -l script.js<br>",
+                "• Gadget: frida -H 127.0.0.1:14725 -F -l script.js"
+        );
     }
 
     private void updateConnectionFields() {
@@ -354,7 +357,7 @@ public class ZaFridaProjectConfigurable implements Configurable {
             settings.addRecentPackage(pkg);
             loadRecentPackages();
             Messages.showInfoMessage(project,
-                    "Package name saved: " + pkg,
+                    String.format("Package name saved: %s", pkg),
                     "ZaFrida");
         }
     }
@@ -391,7 +394,7 @@ public class ZaFridaProjectConfigurable implements Configurable {
                             settings.addRecentPackage(pkg);
                         }
                         Messages.showInfoMessage(project,
-                                "Found " + packages.size() + " installed packages",
+                                String.format("Found %s installed packages", packages.size()),
                                 "ZaFrida");
                     }
 
@@ -402,8 +405,7 @@ public class ZaFridaProjectConfigurable implements Configurable {
             } catch (Exception ex) {
                 SwingUtilities.invokeLater(() -> {
                     Messages.showErrorDialog(project,
-                            "Failed to get packages: " + ex.getMessage() +
-                                    "\n\nMake sure frida-ps is installed and device is connected.",
+                            String.format("Failed to get packages: %s\n\nMake sure frida-ps is installed and device is connected.", ex.getMessage()),
                             "ZaFrida Error");
                     refreshPackagesButton.setEnabled(true);
                     refreshPackagesButton.setText("Refresh Packages");
@@ -445,7 +447,7 @@ public class ZaFridaProjectConfigurable implements Configurable {
 
         int exitCode = process.waitFor();
         if (exitCode != 0) {
-            throw new RuntimeException("frida-ps exited with code " + exitCode);
+            throw new RuntimeException(String.format("frida-ps exited with code %s", exitCode));
         }
 
         return packages;

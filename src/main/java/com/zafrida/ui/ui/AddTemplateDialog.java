@@ -120,7 +120,7 @@ public class AddTemplateDialog extends DialogWrapper {
 
         // 如果内容不是以注释开头，自动添加标题注释
         if (!content.trim().startsWith("//")) {
-            return "// " + name + "\n// Custom Frida script\n\n" + content;
+            return String.format("// %s\n// Custom Frida script\n\n%s", name, content);
         }
         return content;
     }

@@ -227,7 +227,7 @@ public final class ZaFridaTemplatePanel extends JPanel implements Disposable {
         try {
             java.awt.Desktop.getDesktop().open(templateService.getUserTemplatesRoot().toFile());
         } catch (Exception e) {
-            consolePanel.error("[Template] Failed to open folder: " + e.getMessage());
+            consolePanel.error(String.format("[Template] Failed to open folder: %s", e.getMessage()));
         }
     }
 
@@ -245,31 +245,31 @@ public final class ZaFridaTemplatePanel extends JPanel implements Disposable {
 
         Document document = FileDocumentManager.getInstance().getDocument(currentScriptFile);
         if (document == null) {
-            consolePanel.warn("[Template] Cannot access document for: " + currentScriptFile.getName());
+            consolePanel.warn(String.format("[Template] Cannot access document for: %s", currentScriptFile.getName()));
             revertCheckboxState(template, !selected);
             return;
         }
 
         String content = document.getText();
         String templateId = template.getId();
-        String startMarker = TEMPLATE_START_PREFIX + templateId + TEMPLATE_MARKER_SUFFIX;
-        String endMarker = TEMPLATE_END_PREFIX + templateId + TEMPLATE_MARKER_SUFFIX;
+        String startMarker = String.format("%s%s%s", TEMPLATE_START_PREFIX, templateId, TEMPLATE_MARKER_SUFFIX);
+        String endMarker = String.format("%s%s%s", TEMPLATE_END_PREFIX, templateId, TEMPLATE_MARKER_SUFFIX);
 
         if (selected) {
             if (content.contains(startMarker)) {
                 // 已存在，取消注释
                 uncommentTemplate(document, templateId, startMarker, endMarker);
-                consolePanel.info("[Template] Uncommented: " + template.getTitle());
+                consolePanel.info(String.format("[Template] Uncommented: %s", template.getTitle()));
             } else {
                 // 不存在，插入
                 insertTemplate(document, template, startMarker, endMarker);
-                consolePanel.info("[Template] Inserted: " + template.getTitle());
+                consolePanel.info(String.format("[Template] Inserted: %s", template.getTitle()));
             }
         } else {
             if (content.contains(startMarker)) {
                 // 存在，注释掉
                 commentTemplate(document, templateId, startMarker, endMarker);
-                consolePanel.info("[Template] Commented: " + template.getTitle());
+                consolePanel.info(String.format("[Template] Commented: %s", template.getTitle()));
             }
         }
     }
@@ -433,13 +433,13 @@ public final class ZaFridaTemplatePanel extends JPanel implements Disposable {
                 ZaFridaTemplate template = templateCheckBoxList.getItemAt(i);
                 if (template == null) continue;
 
-                String startMarker = TEMPLATE_START_PREFIX + template.getId() + TEMPLATE_MARKER_SUFFIX;
+                String startMarker = String.format("%s%s%s", TEMPLATE_START_PREFIX, template.getId(), TEMPLATE_MARKER_SUFFIX);
                 boolean exists = content.contains(startMarker);
                 boolean isCommented = false;
 
                 if (exists) {
                     int startIdx = content.indexOf(startMarker);
-                    int endMarkerIdx = content.indexOf(TEMPLATE_END_PREFIX + template.getId());
+                    int endMarkerIdx = content.indexOf(String.format("%s%s", TEMPLATE_END_PREFIX, template.getId()));
                     if (startIdx != -1 && endMarkerIdx > startIdx) {
                         int contentStart = content.indexOf('\n', startIdx) + 1;
                         String templateContent = content.substring(contentStart, endMarkerIdx);
@@ -708,7 +708,7 @@ public final class ZaFridaTemplatePanel extends JPanel implements Disposable {
         templateTitleLabel.setText(template.getTitle());
         String desc = template.getDescription();
         if (desc != null && desc.length() > 80) {
-            desc = desc.substring(0, 77) + "...";
+            desc = String.format("%s...", desc.substring(0, 77));
         }
         templateDescLabel.setText(desc != null ? desc : "");
 
@@ -750,7 +750,7 @@ public final class ZaFridaTemplatePanel extends JPanel implements Disposable {
         ZaFridaTemplate t = templateCheckBoxList.getItemAt(index);
         if (t == null) return;
         copyToClipboard(t.getContent());
-        consolePanel.info("[Template] Copied: " + t.getTitle());
+        consolePanel.info(String.format("[Template] Copied: %s", t.getTitle()));
     }
 
     /**
@@ -779,7 +779,7 @@ public final class ZaFridaTemplatePanel extends JPanel implements Disposable {
         }
 
         copyToClipboard(sb.toString().trim());
-        consolePanel.info("[Template] Copied " + selected.size() + " template(s)");
+        consolePanel.info(String.format("[Template] Copied %s template(s)", selected.size()));
     }
 
     /**
@@ -805,9 +805,9 @@ public final class ZaFridaTemplatePanel extends JPanel implements Disposable {
                 // 切换到 Custom 分类
                 categoryList.setSelectedValue(CATEGORY_CUSTOM, true);
                 refreshTemplateList();
-                consolePanel.info("[Template] Added: " + name);
+                consolePanel.info(String.format("[Template] Added: %s", name));
             } else {
-                consolePanel.error("[Template] Failed to add: " + name);
+                consolePanel.error(String.format("[Template] Failed to add: %s", name));
             }
         }
     }
@@ -830,7 +830,7 @@ public final class ZaFridaTemplatePanel extends JPanel implements Disposable {
 
         int result = Messages.showYesNoDialog(
                 project,
-                "Delete template: " + t.getTitle() + "?",
+                String.format("Delete template: %s?", t.getTitle()),
                 "Delete Template",
                 Messages.getQuestionIcon()
         );
@@ -840,7 +840,7 @@ public final class ZaFridaTemplatePanel extends JPanel implements Disposable {
         if (ok) {
             favoriteTemplateIds.remove(t.getId());
             refreshTemplateList();
-            consolePanel.info("[Template] Deleted: " + t.getTitle());
+            consolePanel.info(String.format("[Template] Deleted: %s", t.getTitle()));
         }
     }
 
@@ -855,10 +855,10 @@ public final class ZaFridaTemplatePanel extends JPanel implements Disposable {
 
         if (favoriteTemplateIds.contains(t.getId())) {
             favoriteTemplateIds.remove(t.getId());
-            consolePanel.info("[Template] Unfavorited: " + t.getTitle());
+            consolePanel.info(String.format("[Template] Unfavorited: %s", t.getTitle()));
         } else {
             favoriteTemplateIds.add(t.getId());
-            consolePanel.info("[Template] Favorited: " + t.getTitle());
+            consolePanel.info(String.format("[Template] Favorited: %s", t.getTitle()));
         }
 
         if (CATEGORY_FAVORITES.equals(categoryList.getSelectedValue())) {

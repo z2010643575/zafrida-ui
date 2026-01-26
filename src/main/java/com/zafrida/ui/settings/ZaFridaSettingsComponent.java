@@ -96,7 +96,7 @@ public final class ZaFridaSettingsComponent {
         addRemoteBtn.addActionListener(e -> {
             String defHost = textOrDefault(defaultRemoteHostField.getText(), "127.0.0.1");
             String defPort = textOrDefault(defaultRemotePortField.getText(), "14725");
-            String initial = defHost + ":" + defPort;
+            String initial = String.format("%s:%s", defHost, defPort);
             String input = Messages.showInputDialog(panel, "host:port", "ZAFrida", null, initial, null);
             if (input == null) return;
             String h = input.trim();

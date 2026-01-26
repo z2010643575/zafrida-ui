@@ -924,7 +924,9 @@ public final class ZaStrUtil {
         String text = str.toString();
         if (text.length() > preLength) {
             char first = Character.toLowerCase(text.charAt(preLength));
-            return text.length() > preLength + 1 ? first + text.substring(preLength + 1) : String.valueOf(first);
+            return text.length() > preLength + 1
+                    ? String.format("%c%s", first, text.substring(preLength + 1))
+                    : String.valueOf(first);
         }
         return text;
     }
@@ -1481,7 +1483,7 @@ public final class ZaStrUtil {
      * @return 截取结果
      */
     public static @Nullable String subPreGbk(@Nullable CharSequence str, int len, @Nullable CharSequence suffix) {
-        return subPreGbk(str, len, true) + suffix;
+        return String.format("%s%s", subPreGbk(str, len, true), suffix);
     }
 
     /**
@@ -1729,7 +1731,7 @@ public final class ZaStrUtil {
         long longSize = (long) len * (long) count;
         int size = (int) longSize;
         if ((long) size != longSize) {
-            throw new ArrayIndexOutOfBoundsException("Required String length is too large: " + longSize);
+            throw new ArrayIndexOutOfBoundsException(String.format("Required String length is too large: %s", longSize));
         }
         char[] array = new char[size];
         str.toString().getChars(0, len, array, 0);
@@ -2752,7 +2754,7 @@ public final class ZaStrUtil {
             throw new IllegalArgumentException("length must be > 0");
         }
         if (string == null) return null;
-        return string.length() <= length ? string.toString() : sub(string, 0, length) + "...";
+        return string.length() <= length ? string.toString() : String.format("%s...", sub(string, 0, length));
     }
 
     /**
@@ -2807,7 +2809,7 @@ public final class ZaStrUtil {
      * @return 结果文本
      */
     public static @Nullable String upperFirstAndAddPre(@Nullable CharSequence str, @Nullable String preString) {
-        return str != null && preString != null ? preString + upperFirst(str) : null;
+        return str != null && preString != null ? String.format("%s%s", preString, upperFirst(str)) : null;
     }
 
     /**
@@ -2820,7 +2822,7 @@ public final class ZaStrUtil {
         if (str.length() > 0) {
             char firstChar = str.charAt(0);
             if (Character.isLowerCase(firstChar)) {
-                return Character.toUpperCase(firstChar) + subSuf(str, 1);
+                return String.format("%c%s", Character.toUpperCase(firstChar), subSuf(str, 1));
             }
         }
         return str.toString();
@@ -2836,7 +2838,7 @@ public final class ZaStrUtil {
         if (str.length() > 0) {
             char firstChar = str.charAt(0);
             if (Character.isUpperCase(firstChar)) {
-                return Character.toLowerCase(firstChar) + subSuf(str, 1);
+                return String.format("%c%s", Character.toLowerCase(firstChar), subSuf(str, 1));
             }
         }
         return str.toString();
@@ -3099,11 +3101,11 @@ public final class ZaStrUtil {
                 case 1:
                     return String.valueOf(str.charAt(0));
                 case 2:
-                    return str.charAt(0) + ".";
+                    return String.format("%c.", str.charAt(0));
                 case 3:
-                    return str.charAt(0) + "." + str.charAt(strLength - 1);
+                    return String.format("%c.%c", str.charAt(0), str.charAt(strLength - 1));
                 case 4:
-                    return str.charAt(0) + ".." + str.charAt(strLength - 1);
+                    return String.format("%c..%c", str.charAt(0), str.charAt(strLength - 1));
                 default:
                     int suffixLength = (maxLength - 3) / 2;
                     int preLength = suffixLength + (maxLength - 3) % 2;
@@ -3242,7 +3244,7 @@ public final class ZaStrUtil {
     public static @Nullable String fixLength(@Nullable CharSequence str, char fixedChar, int length) {
         if (str == null) return null;
         int fixedLength = length - str.length();
-        return fixedLength <= 0 ? str.toString() : str + repeat(fixedChar, fixedLength);
+        return fixedLength <= 0 ? str.toString() : String.format("%s%s", str, repeat(fixedChar, fixedLength));
     }
 
     /**

@@ -95,7 +95,7 @@ public final class FridaCliService {
         } else if (mode instanceof AttachNameRunMode) {
             cmd.addParameters("-N", ((AttachNameRunMode) mode).getName());
         } else {
-            throw new IllegalArgumentException("Unknown run mode: " + mode);
+            throw new IllegalArgumentException(String.format("Unknown run mode: %s", mode));
         }
 
         cmd.addParameters("-l", config.getScriptPath());
@@ -262,9 +262,9 @@ public final class FridaCliService {
 
         if (exitCode != 0) {
             String cmdLine = cmd.getCommandLineString();
-            LOG.warn("Frida tool failed: exit=" + exitCode + " cmd=" + cmdLine + " stderr=" + stderr + " stdout=" + stdout);
+            LOG.warn(String.format("Frida tool failed: exit=%s cmd=%s stderr=%s stdout=%s", exitCode, cmdLine, stderr, stdout));
             throw new FridaCliException(
-                    "Command failed (exit=" + exitCode + "): " + cmdLine + "\n" + stderr,
+                    String.format("Command failed (exit=%s): %s\n%s", exitCode, cmdLine, stderr),
                     cmdLine,
                     exitCode,
                     stdout,

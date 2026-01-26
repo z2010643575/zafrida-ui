@@ -37,6 +37,6 @@ public final class ZaFridaProjectFiles {
         String trimmed = projectName.trim();
         if (trimmed.isEmpty()) return DEFAULT_MAIN_SCRIPT;
         String lower = trimmed.toLowerCase(java.util.Locale.ROOT);
-        return lower.endsWith(".js") ? trimmed : trimmed + ".js";
+        return lower.endsWith(".js") ? trimmed : String.format("%s.js", trimmed);
     }
 }

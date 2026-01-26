@@ -222,7 +222,7 @@ public final class ZaFridaDiagnosticsService {
         if (ZaStrUtil.isBlank(home)) {
             return ZaFridaDiagnosticResult.failed("Python interpreter path is empty (Python 解释器路径为空)", TIP_PYTHON_SDK);
         }
-        return ZaFridaDiagnosticResult.success("Python: " + home);
+        return ZaFridaDiagnosticResult.success(String.format("Python: %s", home));
     }
 
     private @NotNull ZaFridaDiagnosticResult checkFridaToolPaths(@NotNull ZaFridaDiagnosticsContext context) {
@@ -277,7 +277,10 @@ public final class ZaFridaDiagnosticsService {
         CommandResult result = runCommand(cmd, 8_000);
         if (result.exitCode != 0) {
             String detail = preferStdErr(result);
-            return ZaFridaDiagnosticResult.failed("frida --version failed: " + detail + " (frida --version 失败: " + detail + ")", TIP_FRIDA_VERSION);
+            return ZaFridaDiagnosticResult.failed(
+                    String.format("frida --version failed: %s (frida --version 失败: %s)", detail, detail),
+                    TIP_FRIDA_VERSION
+            );
         }
         String text = ZaStrUtil.trim(result.stdout);
         if (ZaStrUtil.isBlank(text)) {
@@ -291,11 +294,14 @@ public final class ZaFridaDiagnosticsService {
         CommandResult result = runCommand(cmd, 10_000);
         if (result.exitCode != 0) {
             String detail = preferStdErr(result);
-            return ZaFridaDiagnosticResult.failed("frida-ls-devices failed: " + detail + " (frida-ls-devices 失败: " + detail + ")", TIP_LS_DEVICES);
+            return ZaFridaDiagnosticResult.failed(
+                    String.format("frida-ls-devices failed: %s (frida-ls-devices 失败: %s)", detail, detail),
+                    TIP_LS_DEVICES
+            );
         }
 
         int count = FridaOutputParsers.parseDevices(result.stdout).size();
-        return ZaFridaDiagnosticResult.success("Devices: " + count + " (设备数量: " + count + ")");
+        return ZaFridaDiagnosticResult.success(String.format("Devices: %s (设备数量: %s)", count, count));
     }
 
     private @NotNull ZaFridaDiagnosticResult checkDevicePs(@NotNull ZaFridaDiagnosticsContext context) throws Exception {
@@ -312,12 +318,16 @@ public final class ZaFridaDiagnosticsService {
         CommandResult result = runCommand(cmd, 12_000);
         if (result.exitCode != 0) {
             String detail = preferStdErr(result);
-            return ZaFridaDiagnosticResult.failed("frida-ps failed: " + detail + " (frida-ps 失败: " + detail + ")", TIP_DEVICE_PS);
+            return ZaFridaDiagnosticResult.failed(
+                    String.format("frida-ps failed: %s (frida-ps 失败: %s)", detail, detail),
+                    TIP_DEVICE_PS
+            );
         }
 
         int count = FridaOutputParsers.parseProcesses(result.stdout).size();
-        return ZaFridaDiagnosticResult.success("frida-ps ok, processes: " + count +
-                " (frida-ps ok, 进程数: " + count + ")");
+        return ZaFridaDiagnosticResult.success(
+                String.format("frida-ps ok, processes: %s (frida-ps ok, 进程数: %s)", count, count)
+        );
     }
 
     private @NotNull ZaFridaDiagnosticResult checkAdb(@NotNull ZaFridaDiagnosticsContext context) throws Exception {
@@ -325,7 +335,10 @@ public final class ZaFridaDiagnosticsService {
         CommandResult result = runCommand(cmd, 8_000);
         if (result.exitCode != 0) {
             String detail = preferStdErr(result);
-            return ZaFridaDiagnosticResult.failed("adb not available: " + detail + " (adb 不可用: " + detail + ")", TIP_ADB);
+            return ZaFridaDiagnosticResult.failed(
+                    String.format("adb not available: %s (adb 不可用: %s)", detail, detail),
+                    TIP_ADB
+            );
         }
 
         String stdout = ZaStrUtil.trim(result.stdout);
@@ -352,7 +365,7 @@ public final class ZaFridaDiagnosticsService {
             if (remaining <= 0) {
                 future.cancel(true);
                 return ZaFridaDiagnosticResult.timeout(
-                        "Timeout (" + item.getTimeoutMs() + "ms) (超时（" + item.getTimeoutMs() + "ms）)",
+                        String.format("Timeout (%sms) (超时（%sms）)", item.getTimeoutMs(), item.getTimeoutMs()),
                         "Tip: This check timed out, retry or skip. (提示: 该检查超时，可稍后重试或选择跳过。)"
                 );
             }
@@ -501,13 +514,13 @@ public final class ZaFridaDiagnosticsService {
         if (SystemInfoRt.isWindows) {
             String lower = baseName.toLowerCase(Locale.ROOT);
             if (!lower.endsWith(".exe")) {
-                out.add(baseName + ".exe");
+                out.add(String.format("%s.exe", baseName));
             }
             if (!lower.endsWith(".cmd")) {
-                out.add(baseName + ".cmd");
+                out.add(String.format("%s.cmd", baseName));
             }
             if (!lower.endsWith(".bat")) {
-                out.add(baseName + ".bat");
+                out.add(String.format("%s.bat", baseName));
             }
         }
 

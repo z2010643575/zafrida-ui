@@ -70,7 +70,7 @@ public final class ZaFridaConsolePanel extends JPanel implements Disposable {
      * @param message 文本内容
      */
     public void info(String message) {
-        consoleView.print(message + "\n", ConsoleViewContentType.NORMAL_OUTPUT);
+        consoleView.print(String.format("%s\n", message), ConsoleViewContentType.NORMAL_OUTPUT);
     }
 
     /**
@@ -78,7 +78,7 @@ public final class ZaFridaConsolePanel extends JPanel implements Disposable {
      * @param message 文本内容
      */
     public void warn(String message) {
-        consoleView.print(message + "\n", ConsoleViewContentType.LOG_WARNING_OUTPUT);
+        consoleView.print(String.format("%s\n", message), ConsoleViewContentType.LOG_WARNING_OUTPUT);
     }
 
     /**
@@ -86,7 +86,7 @@ public final class ZaFridaConsolePanel extends JPanel implements Disposable {
      * @param message 文本内容
      */
     public void error(String message) {
-        consoleView.print(message + "\n", ConsoleViewContentType.ERROR_OUTPUT);
+        consoleView.print(String.format("%s\n", message), ConsoleViewContentType.ERROR_OUTPUT);
     }
 
     /**

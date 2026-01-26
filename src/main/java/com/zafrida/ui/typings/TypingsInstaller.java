@@ -61,7 +61,7 @@ public final class TypingsInstaller {
                 FileEditorManager.getInstance(project).openFile(dts, true);
                 ZaFridaNotifier.info(project, "ZAFrida", "Installed typings: .zafrida/typings/frida-gum.d.ts");
             } catch (Throwable t) {
-                ZaFridaNotifier.error(project, "ZAFrida", "Install typings failed: " + t.getMessage());
+                ZaFridaNotifier.error(project, "ZAFrida", String.format("Install typings failed: %s", t.getMessage()));
             }
         });
     }

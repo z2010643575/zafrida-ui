@@ -73,7 +73,7 @@ public abstract class InsertFridaSnippetAction extends AnAction {
         CharSequence content = document.getCharsSequence();
         String prefix = needsLeadingNewline(content, offset) ? "\n" : "";
         String suffix = needsTrailingNewline(content, offset) ? "\n" : "";
-        return prefix + snippet + suffix;
+        return String.format("%s%s%s", prefix, snippet, suffix);
     }
 
     /**
