@@ -1,8 +1,10 @@
 package com.zafrida.ui.templates;
 
+import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.project.Project;
-import com.intellij.openapi.util.io.FileUtil;
+import com.zafrida.ui.settings.ZaFridaSettingsService;
+import com.zafrida.ui.settings.ZaFridaSettingsState;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -17,7 +19,7 @@ import java.util.stream.Stream;
  * [核心服务] 模板文件系统管理器。
  * <p>
  * <strong>职责：</strong>
- * 1. <strong>初始化：</strong> 首次启动时将内置资源 (Resources) 中的模板释放到用户目录 {@code ~/.zafrida/templates}。
+ * 1. <strong>初始化：</strong> 首次启动时将内置资源 (Resources) 中的模板释放到模板根目录（系统目录或 IDE 根目录）。
  * 2. <strong>CRUD：</strong> 提供对 {@code custom/} 目录下自定义模板的增删改查 API。
  * 3. <strong>加载：</strong> 扫描磁盘文件并构建内存中的 {@link ZaFridaTemplate} 列表供 UI 展示。
  */
@@ -28,8 +30,10 @@ public class ZaFridaTemplateService {
 
     /** 内置模板资源根路径 */
     private static final String TEMPLATES_RESOURCE_PATH = "/templates";
-    /** 用户模板目录（相对用户目录） */
-    private static final String USER_TEMPLATES_DIR = "zafrida/templates";
+    /** ZAFRIDA 根目录名 */
+    private static final String ZAFRIDA_DIR_NAME = ".zafrida";
+    /** 模板目录名 */
+    private static final String TEMPLATES_DIR_NAME = "templates";
     /** 自定义模板目录名 */
     private static final String CUSTOM_DIR = "custom";
     /** Android 模板目录名 */
@@ -39,8 +43,8 @@ public class ZaFridaTemplateService {
 
     /** 当前 IDE 项目 */
     private final @NotNull Project project;
-    /** 用户模板根目录 */
-    private final @NotNull Path userTemplatesRoot;
+    /** 模板根目录（系统目录或 IDE 根目录） */
+    private @NotNull Path userTemplatesRoot;
 
     /** 模板缓存列表 */
     private final List<ZaFridaTemplate> cachedTemplates = new ArrayList<>();
@@ -54,16 +58,69 @@ public class ZaFridaTemplateService {
     public ZaFridaTemplateService(@NotNull Project project) {
         this.project = project;
 
-        // 用户模板目录：~/.zafrida/templates 或 IDE配置目录
-        String userHome = System.getProperty("user.home");
-        this.userTemplatesRoot = Paths.get(userHome, ".zafrida", "templates");
+        // 模板根目录：系统目录(~/.zafrida/templates) 或 IDE 根目录
+        this.userTemplatesRoot = resolveTemplatesRoot();
 
         initializeTemplates();
         reload();
     }
 
     /**
-     * 初始化模板目录，将内置模板复制到用户目录
+     * 解析模板根目录（系统目录或 IDE 根目录）。
+     */
+    private @NotNull Path resolveTemplatesRoot() {
+        ZaFridaSettingsService settingsService = ApplicationManager.getApplication().getService(ZaFridaSettingsService.class);
+        ZaFridaSettingsState state = settingsService.getState();
+        String mode = state.templatesRootMode;
+        if (mode == null || mode.trim().isEmpty()) {
+            mode = ZaFridaSettingsState.TEMPLATE_ROOT_MODE_SYSTEM;
+        }
+        String normalized = mode.trim();
+        if (ZaFridaSettingsState.TEMPLATE_ROOT_MODE_IDE.equalsIgnoreCase(normalized)) {
+            Path projectRoot = resolveProjectTemplatesRoot();
+            if (projectRoot != null) {
+                return projectRoot;
+            }
+            LOG.warn("Project base path unavailable, fallback to system templates root.");
+        }
+        return resolveSystemTemplatesRoot();
+    }
+
+    /**
+     * 解析系统目录下的模板根目录。
+     */
+    private @NotNull Path resolveSystemTemplatesRoot() {
+        String userHome = System.getProperty("user.home");
+        if (userHome == null || userHome.trim().isEmpty()) {
+            return Paths.get(ZAFRIDA_DIR_NAME, TEMPLATES_DIR_NAME).toAbsolutePath();
+        }
+        return Paths.get(userHome, ZAFRIDA_DIR_NAME, TEMPLATES_DIR_NAME);
+    }
+
+    /**
+     * 解析 IDE 根目录下的模板根目录。
+     */
+    private @Nullable Path resolveProjectTemplatesRoot() {
+        String basePath = project.getBasePath();
+        if (basePath == null || basePath.trim().isEmpty()) {
+            return null;
+        }
+        return Paths.get(basePath, ZAFRIDA_DIR_NAME, TEMPLATES_DIR_NAME);
+    }
+
+    /**
+     * 确保模板根目录与当前设置保持一致。
+     */
+    private void ensureTemplatesRoot() {
+        Path resolved = resolveTemplatesRoot();
+        if (!resolved.equals(userTemplatesRoot)) {
+            userTemplatesRoot = resolved;
+            initializeTemplates();
+        }
+    }
+
+    /**
+     * 初始化模板目录，将内置模板复制到模板根目录。
      */
     private void initializeTemplates() {
         try {
@@ -187,6 +244,7 @@ public class ZaFridaTemplateService {
      * 重新加载所有模板
      */
     public void reload() {
+        ensureTemplatesRoot();
         cachedTemplates.clear();
 
         // 加载 Android 模板
@@ -268,6 +326,7 @@ public class ZaFridaTemplateService {
      * 添加自定义模板
      */
     public boolean addTemplate(ZaFridaTemplateCategory category, String name, String content) {
+        ensureTemplatesRoot();
         if (category != ZaFridaTemplateCategory.CUSTOM) {
             LOG.warn("Can only add templates to CUSTOM category");
             return false;
@@ -336,10 +395,24 @@ public class ZaFridaTemplateService {
     }
 
     /**
-     * 获取用户模板目录路径
+     * 获取模板根目录路径
      */
     public Path getUserTemplatesRoot() {
+        ensureTemplatesRoot();
         return userTemplatesRoot;
+    }
+
+    /**
+     * 是否使用 IDE 根目录作为模板根目录。
+     * @return true 表示模板根目录位于项目根目录下
+     */
+    public boolean isProjectTemplatesRoot() {
+        ensureTemplatesRoot();
+        Path projectRoot = resolveProjectTemplatesRoot();
+        if (projectRoot == null) {
+            return false;
+        }
+        return projectRoot.equals(userTemplatesRoot);
     }
 
     /**

@@ -3,7 +3,7 @@ package com.zafrida.ui.templates;
  * [枚举] 模板分类定义。
  * <p>
  * <strong>映射关系：</strong>
- * 对应 {@code ~/.zafrida/templates/} 下的子目录名称：
+ * 对应模板根目录（系统目录或 IDE 根目录）下的子目录名称：
  * <ul>
  * <li>{@code ANDROID} -> {@code android/}</li>
  * <li>{@code IOS} -> {@code ios/}</li>

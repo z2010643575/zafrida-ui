@@ -63,7 +63,9 @@ public final class ZaFridaSettingsConfigurable implements SearchableConfigurable
      */
     @Override
     public boolean isModified() {
-        if (component == null) return false;
+        if (component == null) {
+            return false;
+        }
 
         ZaFridaSettingsState copy = new ZaFridaSettingsState();
         // start from current state
@@ -75,6 +77,7 @@ public final class ZaFridaSettingsConfigurable implements SearchableConfigurable
         copy.defaultRemoteHost = settingsService.getState().defaultRemoteHost;
         copy.defaultRemotePort = settingsService.getState().defaultRemotePort;
         copy.useIdeScriptChooser = settingsService.getState().useIdeScriptChooser;
+        copy.templatesRootMode = settingsService.getState().templatesRootMode;
         copy.remoteHosts = settingsService.getRemoteHosts();
 
         component.applyTo(copy);
@@ -82,17 +85,40 @@ public final class ZaFridaSettingsConfigurable implements SearchableConfigurable
         // compare
         // 对比新旧配置
         ZaFridaSettingsState current = settingsService.getState();
-        if (!safeEq(copy.fridaExecutable, current.fridaExecutable)) return true;
-        if (!safeEq(copy.fridaPsExecutable, current.fridaPsExecutable)) return true;
-        if (!safeEq(copy.fridaLsDevicesExecutable, current.fridaLsDevicesExecutable)) return true;
-        if (!safeEq(copy.logsDirName, current.logsDirName)) return true;
-        if (!safeEq(copy.defaultRemoteHost, current.defaultRemoteHost)) return true;
-        if (copy.defaultRemotePort != current.defaultRemotePort) return true;
-        if (copy.useIdeScriptChooser != current.useIdeScriptChooser) return true;
+        if (!safeEq(copy.fridaExecutable, current.fridaExecutable)) {
+            return true;
+        }
+        if (!safeEq(copy.fridaPsExecutable, current.fridaPsExecutable)) {
+            return true;
+        }
+        if (!safeEq(copy.fridaLsDevicesExecutable, current.fridaLsDevicesExecutable)) {
+            return true;
+        }
+        if (!safeEq(copy.logsDirName, current.logsDirName)) {
+            return true;
+        }
+        if (!safeEq(copy.defaultRemoteHost, current.defaultRemoteHost)) {
+            return true;
+        }
+        if (copy.defaultRemotePort != current.defaultRemotePort) {
+            return true;
+        }
+        if (copy.useIdeScriptChooser != current.useIdeScriptChooser) {
+            return true;
+        }
+        if (!safeEq(copy.templatesRootMode, current.templatesRootMode)) {
+            return true;
+        }
 
-        if (copy.remoteHosts == null && current.remoteHosts != null && !current.remoteHosts.isEmpty()) return true;
-        if (copy.remoteHosts != null && current.remoteHosts == null && !copy.remoteHosts.isEmpty()) return true;
-        if (copy.remoteHosts != null && current.remoteHosts != null && !copy.remoteHosts.equals(current.remoteHosts)) return true;
+        if (copy.remoteHosts == null && current.remoteHosts != null && !current.remoteHosts.isEmpty()) {
+            return true;
+        }
+        if (copy.remoteHosts != null && current.remoteHosts == null && !copy.remoteHosts.isEmpty()) {
+            return true;
+        }
+        if (copy.remoteHosts != null && current.remoteHosts != null && !copy.remoteHosts.equals(current.remoteHosts)) {
+            return true;
+        }
 
         return false;
     }
@@ -102,7 +128,9 @@ public final class ZaFridaSettingsConfigurable implements SearchableConfigurable
      */
     @Override
     public void apply() {
-        if (component == null) return;
+        if (component == null) {
+            return;
+        }
         ZaFridaSettingsState newState = new ZaFridaSettingsState();
         newState.fridaExecutable = settingsService.getState().fridaExecutable;
         newState.fridaPsExecutable = settingsService.getState().fridaPsExecutable;
@@ -111,6 +139,7 @@ public final class ZaFridaSettingsConfigurable implements SearchableConfigurable
         newState.defaultRemoteHost = settingsService.getState().defaultRemoteHost;
         newState.defaultRemotePort = settingsService.getState().defaultRemotePort;
         newState.useIdeScriptChooser = settingsService.getState().useIdeScriptChooser;
+        newState.templatesRootMode = settingsService.getState().templatesRootMode;
         newState.remoteHosts = settingsService.getRemoteHosts();
 
         component.applyTo(newState);
@@ -142,7 +171,9 @@ public final class ZaFridaSettingsConfigurable implements SearchableConfigurable
      * @return true 表示相等
      */
     private static boolean safeEq(String a, String b) {
-        if (a == null) return b == null;
+        if (a == null) {
+            return b == null;
+        }
         return a.equals(b);
     }
 }

@@ -132,12 +132,14 @@ public final class ProjectFileUtil {
     }
 
     /**
-     * 打开文件并在 Project 视图中选中。
+     * 打开文件并在 Project 视图中选中（若为目录则仅定位）。
      * @param project 当前 IDE 项目
      * @param file 目标文件
      */
     public static void openAndSelectInProject(@NotNull Project project, @NotNull VirtualFile file) {
-        FileEditorManager.getInstance(project).openFile(file, true);
+        if (!file.isDirectory()) {
+            FileEditorManager.getInstance(project).openFile(file, true);
+        }
         ProjectView view = ProjectView.getInstance(project);
         PsiFile psiFile = PsiManager.getInstance(project).findFile(file);
         if (psiFile != null) {

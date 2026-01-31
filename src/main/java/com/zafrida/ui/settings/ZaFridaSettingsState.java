@@ -11,6 +11,11 @@ import java.util.List;
  */
 public final class ZaFridaSettingsState {
 
+    /** 模板根目录模式：系统目录 */
+    public static final String TEMPLATE_ROOT_MODE_SYSTEM = "SYSTEM";
+    /** 模板根目录模式：IDE 根目录 */
+    public static final String TEMPLATE_ROOT_MODE_IDE = "IDE";
+
     /** frida 可执行文件路径 */
     public String fridaExecutable = "frida";
     /** frida-ps 可执行文件路径 */
@@ -27,4 +32,6 @@ public final class ZaFridaSettingsState {
     public int defaultRemotePort = 14725;
     /** 是否使用 IDE 自带脚本选择器 */
     public boolean useIdeScriptChooser = true;
+    /** 模板根目录模式（SYSTEM/IDE） */
+    public String templatesRootMode = TEMPLATE_ROOT_MODE_SYSTEM;
 }

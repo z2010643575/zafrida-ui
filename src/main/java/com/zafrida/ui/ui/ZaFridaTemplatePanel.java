@@ -13,6 +13,7 @@ import com.intellij.openapi.editor.ex.EditorEx;
 import com.intellij.openapi.editor.highlighter.EditorHighlighterFactory;
 import com.intellij.openapi.fileEditor.FileDocumentManager;
 import com.intellij.openapi.fileTypes.FileTypeManager;
+import com.intellij.openapi.vfs.LocalFileSystem;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.ui.Messages;
 import com.intellij.openapi.vfs.VirtualFile;
@@ -30,6 +31,7 @@ import com.zafrida.ui.fridaproject.ZaFridaPlatform;
 import com.zafrida.ui.templates.ZaFridaTemplate;
 import com.zafrida.ui.templates.ZaFridaTemplateCategory;
 import com.zafrida.ui.templates.ZaFridaTemplateService;
+import com.zafrida.ui.util.ProjectFileUtil;
 import com.zafrida.ui.util.ZaStrUtil;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -38,6 +40,7 @@ import javax.swing.*;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.ListSelectionEvent;
 import java.awt.*;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -224,11 +227,46 @@ public final class ZaFridaTemplatePanel extends JPanel implements Disposable {
      * 打开模板目录。
      */
     private void openTemplatesFolder() {
+        Path root = templateService.getUserTemplatesRoot();
+        if (templateService.isProjectTemplatesRoot()) {
+            openTemplatesFolderInIde(root);
+        } else {
+            openTemplatesFolderInSystem(root);
+        }
+    }
+
+    /**
+     * 使用系统文件管理器打开模板目录。
+     * @param root 模板根目录
+     */
+    private void openTemplatesFolderInSystem(@NotNull Path root) {
         try {
-            java.awt.Desktop.getDesktop().open(templateService.getUserTemplatesRoot().toFile());
+            if (!Desktop.isDesktopSupported()) {
+                consolePanel.warn("[Template] Desktop open is not supported on this platform.");
+                return;
+            }
+            Desktop desktop = Desktop.getDesktop();
+            if (!desktop.isSupported(Desktop.Action.OPEN)) {
+                consolePanel.warn("[Template] Desktop open action is not supported on this platform.");
+                return;
+            }
+            desktop.open(root.toFile());
         } catch (Exception e) {
             consolePanel.error(String.format("[Template] Failed to open folder: %s", e.getMessage()));
         }
+    }
+
+    /**
+     * 在 IDE 中定位模板目录。
+     * @param root 模板根目录
+     */
+    private void openTemplatesFolderInIde(@NotNull Path root) {
+        VirtualFile dir = LocalFileSystem.getInstance().refreshAndFindFileByIoFile(root.toFile());
+        if (dir == null) {
+            consolePanel.warn(String.format("[Template] Templates folder not found: %s", root));
+            return;
+        }
+        ProjectFileUtil.openAndSelectInProject(project, dir);
     }
 
     /**
