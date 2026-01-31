@@ -91,22 +91,25 @@ public final class RunFridaJsAction extends AnAction {
                             return;
                         }
                         boolean switching = previous == null || !previous.equals(loaded);
-                        activateAndRun(project, script, switching);
+                        activateAndRun(project, script, loaded, switching);
                     });
                     return;
                 }
 
                 boolean switching = previous == null || !previous.equals(target);
                 if (!target.equals(pm.getActiveProject())) {
-                    pm.setActiveProjectAsync(target, () -> activateAndRun(project, script, switching));
+                    pm.setActiveProjectAsync(target, () -> activateAndRun(project, script, target, switching));
                 } else {
-                    activateAndRun(project, script, switching);
+                    activateAndRun(project, script, target, switching);
                 }
             });
         });
     }
 
-    private void activateAndRun(@NotNull Project project, @NotNull VirtualFile script, boolean switching) {
+    private void activateAndRun(@NotNull Project project,
+                                @NotNull VirtualFile script,
+                                @Nullable ZaFridaFridaProject expectedProject,
+                                boolean switching) {
         ToolWindow toolWindow = ToolWindowManager.getInstance(project).getToolWindow("ZAFrida");
         if (toolWindow == null) {
             ZaFridaNotifier.warn(project, "ZAFrida", "ZAFrida tool window not available");
@@ -119,11 +122,10 @@ public final class RunFridaJsAction extends AnAction {
                 ZaFridaNotifier.warn(project, "ZAFrida", "ZAFrida run panel not initialized");
                 return;
             }
-            Runnable doRun = () -> runPanel.runWithRunScript(script);
-            if (switching) {
-                ApplicationManager.getApplication().invokeLater(doRun);
+            if (switching && expectedProject != null) {
+                runPanel.runWithRunScriptAfterProjectSwitch(expectedProject, script);
             } else {
-                doRun.run();
+                runPanel.runWithRunScript(script);
             }
         };
 

@@ -150,6 +150,10 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
     private @Nullable VirtualFile attachScriptFile;
     /** 当前项目目录（后台加载） */
     private @Nullable VirtualFile activeProjectDir;
+    /** 最后一次应用到 UI 的项目 */
+    private @Nullable ZaFridaFridaProject lastAppliedProject;
+    /** 等待项目切换完成后的待执行动作 */
+    private @Nullable PendingProjectAction pendingProjectAction;
 
     /** 是否已输出工具链信息 */
     private boolean printedToolchainInfo = false;
@@ -512,6 +516,8 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
             targetField.setEnabled(true);
             targetField.setToolTipText(null);
             activeProjectDir = null;
+            lastAppliedProject = null;
+            pendingProjectAction = null;
             reloadDevicesAsyncWithConfig(null);
             return;
         }
@@ -534,6 +540,8 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
             // 1) 恢复 lastTarget（由设置页保存）
             if (ZaStrUtil.isNotBlank(cfg.lastTarget)) {
                 targetField.setText(cfg.lastTarget);
+            } else {
+                targetField.setText("");
             }
 
             applyConnectionUi(cfg);
@@ -557,6 +565,8 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
             }
 
             reloadDevicesAsyncWithConfig(cfg);
+            lastAppliedProject = active;
+            consumePendingProjectAction(active);
         });
     }
 
@@ -779,6 +789,23 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
     }
 
     /**
+     * 切换项目完成后执行 Run。
+     * @param expectedProject 期望的激活项目
+     * @param file 脚本文件
+     */
+    public void runWithRunScriptAfterProjectSwitch(@NotNull ZaFridaFridaProject expectedProject,
+                                                   @NotNull VirtualFile file) {
+        if (!file.isValid() || file.isDirectory()) {
+            ZaFridaNotifier.warn(project, "ZAFrida", "Invalid script file");
+            return;
+        }
+        enqueueProjectAction(expectedProject, () -> {
+            setRunScriptFile(file);
+            triggerRun();
+        });
+    }
+
+    /**
      * 触发 Attach 行为。
      */
     public void triggerAttach() {
@@ -797,6 +824,55 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
         }
         setAttachScriptFile(file);
         triggerAttach();
+    }
+
+    /**
+     * 切换项目完成后执行 Attach。
+     * @param expectedProject 期望的激活项目
+     * @param file 脚本文件
+     */
+    public void attachWithScriptAfterProjectSwitch(@NotNull ZaFridaFridaProject expectedProject,
+                                                   @NotNull VirtualFile file) {
+        if (!file.isValid() || file.isDirectory()) {
+            ZaFridaNotifier.warn(project, "ZAFrida", "Invalid attach script file");
+            return;
+        }
+        enqueueProjectAction(expectedProject, () -> {
+            setAttachScriptFile(file);
+            triggerAttach();
+        });
+    }
+
+    /**
+     * 记录等待项目切换完成后的动作。
+     * @param expectedProject 期望激活的项目
+     * @param action 待执行动作
+     */
+    private void enqueueProjectAction(@NotNull ZaFridaFridaProject expectedProject, @NotNull Runnable action) {
+        if (expectedProject.equals(lastAppliedProject)) {
+            action.run();
+            return;
+        }
+        pendingProjectAction = new PendingProjectAction(expectedProject, action);
+    }
+
+    /**
+     * 如果当前激活项目匹配，执行等待中的动作。
+     * @param active 当前激活项目
+     */
+    private void consumePendingProjectAction(@Nullable ZaFridaFridaProject active) {
+        PendingProjectAction pending = pendingProjectAction;
+        if (pending == null) {
+            return;
+        }
+        if (active == null) {
+            return;
+        }
+        if (!active.equals(pending.expectedProject)) {
+            return;
+        }
+        pendingProjectAction = null;
+        pending.action.run();
     }
 
     /**
@@ -1743,6 +1819,18 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
         addRemoteBtn.setEnabled(!disabled);
     }
 
+    /**
+     * 项目切换完成后的待执行动作。
+     */
+    private static final class PendingProjectAction {
+        private final @NotNull ZaFridaFridaProject expectedProject;
+        private final @NotNull Runnable action;
+
+        private PendingProjectAction(@NotNull ZaFridaFridaProject expectedProject, @NotNull Runnable action) {
+            this.expectedProject = expectedProject;
+            this.action = action;
+        }
+    }
 
     /**
      * 释放资源。

@@ -94,22 +94,25 @@ public final class AttachFridaJsAction extends AnAction {
                             return;
                         }
                         boolean switching = previous == null || !previous.equals(loaded);
-                        activateAndAttach(project, script, switching);
+                        activateAndAttach(project, script, loaded, switching);
                     });
                     return;
                 }
 
                 boolean switching = previous == null || !previous.equals(target);
                 if (!target.equals(pm.getActiveProject())) {
-                    pm.setActiveProjectAsync(target, () -> activateAndAttach(project, script, switching));
+                    pm.setActiveProjectAsync(target, () -> activateAndAttach(project, script, target, switching));
                 } else {
-                    activateAndAttach(project, script, switching);
+                    activateAndAttach(project, script, target, switching);
                 }
             });
         });
     }
 
-    private void activateAndAttach(@NotNull Project project, @NotNull VirtualFile script, boolean switching) {
+    private void activateAndAttach(@NotNull Project project,
+                                   @NotNull VirtualFile script,
+                                   @Nullable ZaFridaFridaProject expectedProject,
+                                   boolean switching) {
         ToolWindow toolWindow = ToolWindowManager.getInstance(project).getToolWindow("ZAFrida");
         if (toolWindow == null) {
             ZaFridaNotifier.warn(project, "ZAFrida", "ZAFrida tool window not available");
@@ -122,11 +125,10 @@ public final class AttachFridaJsAction extends AnAction {
                 ZaFridaNotifier.warn(project, "ZAFrida", "ZAFrida run panel not initialized");
                 return;
             }
-            Runnable doAttach = () -> runPanel.attachWithScript(script);
-            if (switching) {
-                ApplicationManager.getApplication().invokeLater(doAttach);
+            if (switching && expectedProject != null) {
+                runPanel.attachWithScriptAfterProjectSwitch(expectedProject, script);
             } else {
-                doAttach.run();
+                runPanel.attachWithScript(script);
             }
         };
 
