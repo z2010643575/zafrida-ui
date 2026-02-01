@@ -39,10 +39,14 @@ public abstract class InsertFridaSnippetAction extends AnAction {
     public void actionPerformed(@NotNull AnActionEvent e) {
         Project project = e.getProject();
         Editor editor = e.getData(CommonDataKeys.EDITOR);
-        if (project == null || editor == null) return;
+        if (project == null || editor == null) {
+            return;
+        }
 
         Document document = editor.getDocument();
-        if (!document.isWritable()) return;
+        if (!document.isWritable()) {
+            return;
+        }
 
         int offset = editor.getCaretModel().getOffset();
         String insertion = applyLinePadding(document, offset, snippet);
@@ -71,9 +75,22 @@ public abstract class InsertFridaSnippetAction extends AnAction {
      */
     private static @NotNull String applyLinePadding(@NotNull Document document, int offset, @NotNull String snippet) {
         CharSequence content = document.getCharsSequence();
-        String prefix = needsLeadingNewline(content, offset) ? "\n" : "";
-        String suffix = needsTrailingNewline(content, offset) ? "\n" : "";
-        return String.format("%s%s%s", prefix, snippet, suffix);
+        int lineNumber = document.getLineNumber(offset);
+        int lineStart = document.getLineStartOffset(lineNumber);
+        int lineEnd = document.getLineEndOffset(lineNumber);
+        int firstNonWhitespace = findFirstNonWhitespace(content, lineStart, lineEnd);
+        String lineIndent = content.subSequence(lineStart, firstNonWhitespace).toString();
+        String adjustedSnippet = indentSnippet(snippet, lineIndent);
+        StringBuilder builder = new StringBuilder();
+        if (shouldAddLeadingNewline(content, offset, firstNonWhitespace)) {
+            builder.append('\n');
+            builder.append(lineIndent);
+        }
+        builder.append(adjustedSnippet);
+        if (needsTrailingNewline(content, offset)) {
+            builder.append('\n');
+        }
+        return builder.toString();
     }
 
     /**
@@ -82,8 +99,17 @@ public abstract class InsertFridaSnippetAction extends AnAction {
      * @param offset 插入位置
      * @return true 表示需要
      */
-    private static boolean needsLeadingNewline(@NotNull CharSequence content, int offset) {
-        return offset > 0 && content.charAt(offset - 1) != '\n';
+    private static boolean shouldAddLeadingNewline(@NotNull CharSequence content, int offset, int firstNonWhitespace) {
+        if (offset == 0) {
+            return false;
+        }
+        if (content.charAt(offset - 1) == '\n') {
+            return false;
+        }
+        if (offset <= firstNonWhitespace) {
+            return false;
+        }
+        return true;
     }
 
     /**
@@ -94,5 +120,37 @@ public abstract class InsertFridaSnippetAction extends AnAction {
      */
     private static boolean needsTrailingNewline(@NotNull CharSequence content, int offset) {
         return offset < content.length() && content.charAt(offset) != '\n';
+    }
+
+    private static @NotNull String indentSnippet(@NotNull String snippet, @NotNull String lineIndent) {
+        if (lineIndent.isEmpty()) {
+            return snippet;
+        }
+        String[] lines = snippet.split("\n", -1);
+        if (lines.length <= 1) {
+            return snippet;
+        }
+        StringBuilder builder = new StringBuilder();
+        builder.append(lines[0]);
+        for (int index = 1; index < lines.length; index++) {
+            builder.append('\n');
+            if (!lines[index].isEmpty()) {
+                builder.append(lineIndent);
+            }
+            builder.append(lines[index]);
+        }
+        return builder.toString();
+    }
+
+    private static int findFirstNonWhitespace(@NotNull CharSequence content, int lineStart, int lineEnd) {
+        int index = lineStart;
+        while (index < lineEnd) {
+            char current = content.charAt(index);
+            if (current != ' ' && current != '\t') {
+                break;
+            }
+            index++;
+        }
+        return index;
     }
 }
