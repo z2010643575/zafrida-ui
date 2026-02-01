@@ -15,8 +15,7 @@ public class InsertJavaPerformAction extends InsertFridaSnippetAction {
     private static final @NotNull String SNIPPET = String.join("\n",
             """
                     Java.perform(function () {
-                      var Activity = Java.use("android.app.Activity");
-                      console.log(Activity);
+                      
                     });
                     """
     );
