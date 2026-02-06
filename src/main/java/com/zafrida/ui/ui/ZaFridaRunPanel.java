@@ -78,6 +78,8 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
     private static final String PLUGIN_ID = "com.zafrida.ui";
     private static final String MARKETPLACE_PLUGIN_DETAILS_URL =
             String.format("https://plugins.jetbrains.com/plugins/list?pluginId=%s", PLUGIN_ID);
+    private static final String USB_DEVICE_TYPE = "usb";
+    private static final String ADB_SHELL_COMMAND = "adb shell";
 
     /** IDE 项目实例 */
     private final @NotNull Project project;
@@ -161,6 +163,10 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
     private @Nullable String currentPluginVersion;
     /** 是否已触发更新检查 */
     private boolean updateCheckStarted = false;
+    /** 是否已提示 USB 设备为空 */
+    private boolean warnedNoUsbDevices = false;
+    /** 上次提示缺失的 USB 设备 ID */
+    private @Nullable String lastMissingUsbDeviceId;
 
     /** ZAFrida 项目管理器 */
     private final ZaFridaProjectManager fridaProjectManager;
@@ -926,7 +932,7 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
      */
     private JPanel buildDeviceRow() {
         JPanel p = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
-        deviceCombo.setPrototypeDisplayValue(new FridaDevice("usb", "usb", "Android"));
+        deviceCombo.setPrototypeDisplayValue(new FridaDevice(USB_DEVICE_TYPE, USB_DEVICE_TYPE, "Android"));
         deviceCombo.setMinimumAndPreferredWidth(258);
         p.add(deviceCombo);
         p.add(refreshDevicesBtn);
@@ -1196,19 +1202,21 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
                         devices.add(new FridaDevice(String.format("%s:%s", type, host), type, name, FridaDeviceMode.HOST, host));
                     }
                 }
+                List<FridaDevice> sortedDevices = sortUsbDevicesFirst(devices);
 
                 ApplicationManager.getApplication().invokeLater(() -> {
                     updatingDeviceCombo = true;
                     try {
                         deviceCombo.removeAllItems();
-                        for (FridaDevice d : devices) {
+                        for (FridaDevice d : sortedDevices) {
                             deviceCombo.addItem(d);
                         }
-                        selectSavedDevice(devices, cfg);
+                        selectSavedDevice(sortedDevices, cfg);
                     } finally {
                         updatingDeviceCombo = false;
                     }
-                    runConsolePanel.info(String.format("[ZAFrida] Devices loaded: %s", devices.size()));
+                    runConsolePanel.info(String.format("[ZAFrida] Devices loaded: %s", sortedDevices.size()));
+                    applyUsbDeviceHints(sortedDevices, cfg, finalConnectionMode);
                     disableControls(false);
                 });
             } catch (Throwable t) {
@@ -1302,6 +1310,100 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
      */
     private static boolean containsHost(@NotNull List<FridaDevice> devices, @NotNull String host) {
         return findDeviceByHost(devices, host) != null;
+    }
+
+    /**
+     * USB 设备优先排序（保持相对顺序）。
+     * @param devices 设备列表
+     * @return 排序后的设备列表
+     */
+    private static @NotNull List<FridaDevice> sortUsbDevicesFirst(@NotNull List<FridaDevice> devices) {
+        if (devices.isEmpty()) {
+            return devices;
+        }
+        List<FridaDevice> usbDevices = new ArrayList<>();
+        List<FridaDevice> others = new ArrayList<>();
+        for (FridaDevice device : devices) {
+            if (isUsbDevice(device)) {
+                usbDevices.add(device);
+            } else {
+                others.add(device);
+            }
+        }
+        if (usbDevices.isEmpty() || others.isEmpty()) {
+            return devices;
+        }
+        List<FridaDevice> sorted = new ArrayList<>(devices.size());
+        sorted.addAll(usbDevices);
+        sorted.addAll(others);
+        return sorted;
+    }
+
+    /**
+     * 提示 USB 相关信息（不打断流程）。
+     * @param devices 设备列表
+     * @param cfg 项目配置
+     * @param connectionMode 连接模式
+     */
+    private void applyUsbDeviceHints(@NotNull List<FridaDevice> devices,
+                                     @Nullable ZaFridaProjectConfig cfg,
+                                     @NotNull FridaConnectionMode connectionMode) {
+        boolean hasUsb = hasUsbDevice(devices);
+        if (hasUsb) {
+            warnedNoUsbDevices = false;
+        } else {
+            if (!warnedNoUsbDevices) {
+                runConsolePanel.warn(String.format(
+                        "[ZAFrida] No USB devices found. If you're using USB mode, run \"%s\" in a terminal to initialize the ADB connection.",
+                        ADB_SHELL_COMMAND));
+                warnedNoUsbDevices = true;
+            }
+        }
+
+        if (cfg == null) {
+            lastMissingUsbDeviceId = null;
+            return;
+        }
+        if (connectionMode != FridaConnectionMode.USB) {
+            lastMissingUsbDeviceId = null;
+            return;
+        }
+        if (ZaStrUtil.isBlank(cfg.lastDeviceId)) {
+            lastMissingUsbDeviceId = null;
+            return;
+        }
+        if (findDeviceById(devices, cfg.lastDeviceId) != null) {
+            lastMissingUsbDeviceId = null;
+            return;
+        }
+        if (!cfg.lastDeviceId.equals(lastMissingUsbDeviceId)) {
+            ZaFridaNotifier.warn(project, "ZAFrida",
+                    String.format("Saved USB device not found: %s. Please refresh or switch device.", cfg.lastDeviceId));
+            lastMissingUsbDeviceId = cfg.lastDeviceId;
+        }
+    }
+
+    /**
+     * 是否存在 USB 设备。
+     * @param devices 设备列表
+     * @return true 表示存在
+     */
+    private static boolean hasUsbDevice(@NotNull List<FridaDevice> devices) {
+        for (FridaDevice device : devices) {
+            if (isUsbDevice(device)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * 判断是否为 USB 设备。
+     * @param device 设备
+     * @return true 表示 USB
+     */
+    private static boolean isUsbDevice(@NotNull FridaDevice device) {
+        return USB_DEVICE_TYPE.equalsIgnoreCase(device.getType());
     }
 
     /**
