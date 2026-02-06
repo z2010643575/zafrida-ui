@@ -40,6 +40,9 @@ ZAFrida 并不替代 Frida，而是作为 `frida-tools` 的强大 UI 外壳，�
 * 点击 **Run**。
 6.  **使用模板**: 切换到 `Templates` 标签页，勾选你需要的 Hook 功能（如 "SSL Pinning Bypass"），代码会自动注入到你的脚本中。
 
+微信群二维码
+-----------------------------------
+<img src="doc/wx_group_qrcode.jpeg" alt="ZAFrida 微信群二维码" width="260" />
 
 功能特性
 -----------------------------------
