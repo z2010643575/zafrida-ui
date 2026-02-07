@@ -24,6 +24,7 @@ ZAFrida UI 是一款集成在 PyCharm 和 JetBrains 系列 IDE 中的 Frida 图�
 
 ZAFrida 并不替代 Frida，而是作为 `frida-tools` 的强大 UI 外壳，无缝衔接您现有的 Python 和 Frida 环境。
 
+**简易版 Wiki**： [ZAFrida UI 简易 Wiki (BBS)](./zafrida_ui_wiki_bbs_zh.md)（这是更简易的 Wiki）
 **详细使用教程**： [ZAFrida UI 详细使用教程 Wiki](./ZAFridaUI_Wiki_zh.md)
 
 ## 效果演示
