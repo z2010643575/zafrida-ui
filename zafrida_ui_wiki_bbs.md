@@ -33,6 +33,8 @@
 
 **ZAFrida UI 是一个集成到 PyCharm/IntelliJ 的 Frida 图形化插件：你在 JS 编辑区右键就能 Run/Attach 当前脚本，并且会根据脚本路径自动切换到对应的 ZAFrida 项目上下文（设备/包名/连接方式/参数）；同时提供右键 Snippets 和复选框模板系统，把 Hook 脚本当积木组装。**
 
+[开源仓库](https://github.com/yilongmd/zafrida-ui)
+
 ![](doc/home.png "home")
 
 ---
