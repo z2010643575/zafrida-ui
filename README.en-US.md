@@ -24,6 +24,8 @@ The core highlight is its **"Checkbox-style" Template Management System**: users
 
 ZAFrida does not replace Frida but serves as a powerful UI wrapper for `frida-tools`, seamlessly connecting with your existing Python and Frida environment.
 
+**Full Wiki**: [ZAFrida UI Wiki (EN)](./ZAFridaUI_Wiki_en.md)
+
 ## Home
 ![Home](doc/home.png "Home")
 
