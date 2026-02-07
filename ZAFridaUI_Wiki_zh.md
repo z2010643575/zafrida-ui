@@ -106,7 +106,7 @@
 
 下一步建议看：
 - [03-Doctor](03-Doctor)（环境不稳先跑 Doctor）
-- [06-Editor-Run-Attach](06-Editor-Run-Attach)（核心爽点：编辑区右键 Run/Attach）
+- [06-Editor-Run-Attach](06-Editor-Run-Attach)（核心爽点：编辑区右键 Run/Attach，方便我们应对多个 App、多台设备、多种连接模式的调试场景）
 
 ---
 
@@ -244,7 +244,7 @@ ZAFrida 的“项目”是你日常逆向最核心的上下文：脚本、目标
 - **Load Frida Project**：把已有的项目目录载入到工作区
 - **Select Frida Project**：把某个已载入项目切为当前激活项目
 
-> 建立在JS中直接使用Run Frida JS, 这样切换项目比Select Frida Project方便得多(这个是早期开发预留的)
+> 建立在JS中直接使用Run Frida JS, 这样切换项目比Select Frida Project方便得多(这个是早期开发预留的)。这也更方便我们应对多个 App、多台设备、多种连接模式的调试场景。
 
 ---
 
@@ -342,7 +342,7 @@ Run 面板负责把 frida-tools 的常用参数变成“可视化字段”。
 
 ## 06 编辑区右键 Run/Attach（核心爽点）
 
-你不再从“命令行参数”出发，而是从“脚本文件”出发。
+你不再从“命令行参数”出发，而是从“脚本文件”出发。这也是我们应对多个 App、多台设备、多种连接模式调试的核心方式。
 
 ---
 
@@ -596,7 +596,7 @@ ZAFrida 会通过 IDE 的 Balloon Notification 提示你“当前操作为什么
 #### 8) No Frida project found for this script
 
 - 编辑器右键 Run/Attach 时，找不到脚本所属项目  
-修复：把脚本放到包含 `zafrida-project.xml` 的目录下（或 Load 项目）。
+修复：把脚本放到包含 `zafrida-project.xml` 的目录下（或 Load 项目）。多个 App、多台设备、多种连接模式切换时尤其要确认脚本归属项目。
 
 #### 9) ZAFrida tool window not available / run panel not initialized
 
@@ -680,6 +680,7 @@ ZAFrida 会通过 IDE 的 Balloon Notification 提示你“当前操作为什么
 
 - 脚本必须位于包含 `zafrida-project.xml` 的目录树内  
 - 且该目录必须在当前打开的 IDE 工程根目录下
+- 多个 App、多台设备、多种连接模式调试时，优先检查脚本是否在正确项目内
 
 
 ---
@@ -743,7 +744,7 @@ ZAFrida 会通过 IDE 的 Balloon Notification 提示你“当前操作为什么
 ### 0x01 小技巧：把脚本当入口，不要当参数
 
 - 脚本放进正确的 ZAFrida 项目目录
-- 编辑器里右键 Run/Attach
+- 编辑器里右键 Run/Attach，方便我们应对多个 App、多台设备、多种连接模式的调试场景
 - 减少“跑错设备/跑错包/跑错参数”
 
 ---
@@ -769,6 +770,7 @@ ZAFrida 会通过 IDE 的 Balloon Notification 提示你“当前操作为什么
 ### 0x00 先看结论：ZAFrida UI 是干嘛的？
 
 **ZAFrida UI 是一个集成到 PyCharm/IntelliJ 的 Frida 图形化插件：你在 JS 编辑区右键就能 Run/Attach 当前脚本，并且会根据脚本路径自动切换到对应的 ZAFrida 项目上下文（设备/包名/连接方式/参数）；同时提供右键 Snippets 和复选框模板系统，把 Hook 脚本当积木组装。**
+这也非常方便我们应对多个 App、多台设备、多种连接模式的调试场景。
 
 ![](doc/home.png "home")
 
@@ -851,7 +853,7 @@ Project View 右键：
 - Run Frida JS
 - Attach Frida JS
 
-它会根据脚本路径自动切换到所属项目并执行。
+它会根据脚本路径自动切换到所属项目并执行。这对多个 App、多台设备、多种连接模式的调试场景尤其方便。
 
 ![](doc/editor_menu_run_attach.png "editor_menu_run_attach")
 

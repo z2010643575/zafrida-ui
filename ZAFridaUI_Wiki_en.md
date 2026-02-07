@@ -106,7 +106,7 @@ Then click:
 
 Next steps:
 - [03-Doctor](03-Doctor) (run Doctor first if environment is unstable)
-- [06-Editor-Run-Attach](06-Editor-Run-Attach) (the key highlight: editor right click Run/Attach)
+- [06-Editor-Run-Attach](06-Editor-Run-Attach) (the key highlight: editor right click Run/Attach, ideal for multi-app, multi-device, and multi-connection-mode debugging)
 
 ---
 
@@ -244,7 +244,7 @@ Right click any directory in Project View:
 - **Load Frida Project**: load an existing project directory into workspace
 - **Select Frida Project**: set one loaded project as active
 
-> If you run from JS files directly via Run Frida JS, switching projects is more convenient than Select Frida Project (this entry point is kept for early design compatibility).
+> If you run from JS files directly via Run Frida JS, switching projects is more convenient than Select Frida Project (this entry point is kept for early design compatibility). It is also a natural fit for multi-app, multi-device, and multi-connection-mode debugging.
 
 ---
 
@@ -342,7 +342,7 @@ Buttons (left to right):
 
 ## 06 Editor Right-Click Run/Attach (key highlight)
 
-You no longer start from command-line parameters, but from the script file itself.
+You no longer start from command-line parameters, but from the script file itself. This is a core workflow for multi-app, multi-device, and multi-connection-mode debugging.
 
 ---
 
@@ -596,7 +596,7 @@ Fix: fill package name (Android).
 #### 8) No Frida project found for this script
 
 - Right click Run/Attach cannot find project for script
-Fix: move script under a directory containing `zafrida-project.xml` (or Load project).
+Fix: move script under a directory containing `zafrida-project.xml` (or Load project). When switching between multiple apps, devices, or connection modes, double-check the script belongs to the intended project.
 
 #### 9) ZAFrida tool window not available / run panel not initialized
 
@@ -680,6 +680,7 @@ This page gives the shortest path based on what you see.
 
 - Script must be under a directory tree containing `zafrida-project.xml`
 - That directory must be under the current IDE project root
+- In multi-app, multi-device, and multi-connection-mode debugging, verify the script is under the correct project
 
 
 ---
@@ -743,7 +744,7 @@ Package the whole `android/<proj>/` or `ios/<proj>/` directory (with `zafrida-pr
 ### 0x01 Tip: treat the script as the entry, not parameters
 
 - Put the script under the correct ZAFrida project directory
-- Right click Run/Attach in the editor
+- Right click Run/Attach in the editor, great for multi-app, multi-device, and multi-connection-mode debugging
 - Avoid "wrong device / wrong package / wrong args"
 
 ---
@@ -769,6 +770,7 @@ Package the whole `android/<proj>/` or `ios/<proj>/` directory (with `zafrida-pr
 ### 0x00 Summary first: what is ZAFrida UI?
 
 **ZAFrida UI is a Frida GUI plugin integrated into PyCharm/IntelliJ. You can right-click a JS file to Run/Attach the current script, and it auto switches to the corresponding ZAFrida project context (device/package/connection/args) based on the script path. It also provides right-click Snippets and a checkbox-based template system to assemble Hook scripts like blocks.**
+This makes multi-app, multi-device, and multi-connection-mode debugging much easier.
 
 ![](doc/home.png "home")
 
@@ -851,7 +853,7 @@ Open any `.js` file -> right click:
 - Run Frida JS
 - Attach Frida JS
 
-It auto switches to the project based on script path and executes.
+It auto switches to the project based on script path and executes. This is especially handy for multi-app, multi-device, and multi-connection-mode debugging.
 
 ![](doc/editor_menu_run_attach.png "editor_menu_run_attach")
 
