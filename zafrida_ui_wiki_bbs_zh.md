@@ -11,7 +11,7 @@
 - AI辅助编程(如CodeWhisperer, Copilot等)
 - 版本管理(git等), 团队协作
 - 多文件管理
-- 多项目管理
+- 多项目管理(每个App为一个Frida项目, 通过插件的New Frida Project会自动生成文件夹等配置信息)
 
 ---
 
