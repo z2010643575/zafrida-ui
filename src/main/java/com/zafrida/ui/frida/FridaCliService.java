@@ -8,6 +8,7 @@ import com.intellij.execution.process.OSProcessHandler;
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.project.Project;
+import com.intellij.openapi.util.SystemInfoRt;
 import com.zafrida.ui.python.ProjectPythonEnvResolver;
 import com.zafrida.ui.python.PythonEnvInfo;
 import com.zafrida.ui.settings.ZaFridaSettingsService;
@@ -17,7 +18,10 @@ import org.jetbrains.annotations.NotNull;
 
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
+import java.util.Set;
 
 /**
  * [核心服务] Frida 命令行工具执行网关。
@@ -33,6 +37,28 @@ public final class FridaCliService {
 
     /** 日志记录器 */
     private static final Logger LOG = Logger.getInstance(FridaCliService.class);
+
+    /** 默认的设备枚举超时（毫秒）。部分 Windows / 远程环境可能较慢，因此这里相对保守。 */
+    private static final int LIST_DEVICES_TIMEOUT_MS = 30_000;
+
+    /** 通过 python -c 直接调用 frida 模块枚举设备，避免 frida-ls-devices 依赖 prompt_toolkit/Console。 */
+    private static final String PY_ENUM_DEVICES_SCRIPT =
+            "import frida\n"
+                    + "def _type_str(v):\n"
+                    + "    try:\n"
+                    + "        if hasattr(v, 'value'):\n"
+                    + "            return str(v.value)\n"
+                    + "        if hasattr(v, 'name'):\n"
+                    + "            return str(v.name)\n"
+                    + "    except Exception:\n"
+                    + "        pass\n"
+                    + "    return str(v)\n"
+                    + "print('Id  Type  Name')\n"
+                    + "for d in frida.enumerate_devices():\n"
+                    + "    t = _type_str(getattr(d, 'type', ''))\n"
+                    + "    if t:\n"
+                    + "        t = t.lower()\n"
+                    + "    print(f\"{getattr(d, 'id', '')}  {t}  {getattr(d, 'name', '')}\")\n";
 
     /** 设置服务 */
     private final ZaFridaSettingsService settings;
@@ -51,8 +77,33 @@ public final class FridaCliService {
      */
     public @NotNull List<FridaDevice> listDevices(@NotNull Project project) {
         GeneralCommandLine cmd = buildLsDevicesCommandLine(project);
-        CapturedOut out = runCapturing(cmd, 15_000);
-        return FridaOutputParsers.parseDevices(out.stdout);
+        try {
+            CapturedOut out = runCapturing(cmd, LIST_DEVICES_TIMEOUT_MS);
+            return FridaOutputParsers.parseDevices(out.stdout);
+        } catch (FridaCliException e) {
+            // Best-effort: some environments may produce valid table output but still exit non-zero.
+            // 尽力而为：某些环境下即便 exit code 非 0，也可能已经输出了可解析的表格内容。
+            List<FridaDevice> parsed = FridaOutputParsers.parseDevices(e.getStdout());
+            if (!parsed.isEmpty()) {
+                LOG.warn(String.format("frida-ls-devices returned non-zero but produced %s devices, use stdout anyway. exit=%s cmd=%s",
+                        parsed.size(), e.getExitCode(), e.getCommandLine()));
+                return parsed;
+            }
+
+            if (shouldFallbackToPythonForNoConsole(e)) {
+                LOG.warn(String.format("frida-ls-devices failed due to missing Windows console, fallback to python frida enumeration. cmd=%s",
+                        e.getCommandLine()));
+                try {
+                    return listDevicesViaPython(project);
+                } catch (Throwable t) {
+                    // Keep the original error for UI, but retain fallback failure for logs.
+                    // UI 侧保留原始报错信息，但日志中保留 fallback 失败原因。
+                    e.addSuppressed(t);
+                    throw e;
+                }
+            }
+            throw e;
+        }
     }
 
     /**
@@ -171,6 +222,95 @@ public final class FridaCliService {
         GeneralCommandLine cmd = new GeneralCommandLine(s.fridaLsDevicesExecutable)
                 .withCharset(StandardCharsets.UTF_8);
         applyProjectPythonEnv(project, cmd);
+        return cmd;
+    }
+
+    private boolean shouldFallbackToPythonForNoConsole(@NotNull FridaCliException e) {
+        if (!SystemInfoRt.isWindows) {
+            return false;
+        }
+
+        String detail = e.getStderr();
+        if (ZaStrUtil.isBlank(detail)) {
+            detail = e.getMessage();
+        }
+        if (ZaStrUtil.isBlank(detail)) {
+            return false;
+        }
+
+        String lower = detail.toLowerCase(Locale.ROOT);
+        if (lower.contains("noconsolescreenbuffererror")) {
+            return true;
+        }
+        if (lower.contains("no windows console found")) {
+            return true;
+        }
+        // defensive: prompt_toolkit on Windows console initialization
+        // 防御性判断：prompt_toolkit 在 Windows 下初始化 Console 失败
+        if (lower.contains("prompt_toolkit") && lower.contains("no console")) {
+            return true;
+        }
+        return false;
+    }
+
+    private @NotNull List<FridaDevice> listDevicesViaPython(@NotNull Project project) {
+        List<String> candidates = resolvePythonCandidates(project);
+        FridaCliException lastCliError = null;
+
+        for (String pythonExe : candidates) {
+            try {
+                GeneralCommandLine cmd = buildPythonEnumerateDevicesCommandLine(project, pythonExe);
+                CapturedOut out = runCapturing(cmd, LIST_DEVICES_TIMEOUT_MS);
+                return FridaOutputParsers.parseDevices(out.stdout);
+            } catch (FridaCliException e) {
+                lastCliError = e;
+                LOG.warn(String.format("List devices via python failed: python=%s exit=%s cmd=%s", pythonExe, e.getExitCode(), e.getCommandLine()));
+            } catch (Throwable t) {
+                LOG.warn(String.format("List devices via python failed: python=%s", pythonExe), t);
+            }
+        }
+
+        if (lastCliError != null) {
+            throw lastCliError;
+        }
+        return new ArrayList<>();
+    }
+
+    private @NotNull List<String> resolvePythonCandidates(@NotNull Project project) {
+        Set<String> out = new LinkedHashSet<>();
+
+        PythonEnvInfo env = ProjectPythonEnvResolver.resolve(project);
+        if (env != null) {
+            String home = env.getPythonHome();
+            if (ZaStrUtil.isNotBlank(home)) {
+                out.add(home);
+            }
+        }
+
+        // Fallback to common python executable names in PATH.
+        // 回退到 PATH 中常见的 python 可执行名称。
+        out.add("python");
+        if (SystemInfoRt.isWindows) {
+            out.add("py");
+        }
+
+        return new ArrayList<>(out);
+    }
+
+    private @NotNull GeneralCommandLine buildPythonEnumerateDevicesCommandLine(@NotNull Project project,
+                                                                              @NotNull String pythonExe) {
+        GeneralCommandLine cmd = new GeneralCommandLine(pythonExe)
+                .withCharset(StandardCharsets.UTF_8);
+
+        applyProjectPythonEnv(project, cmd);
+
+        // Make python stdout/stderr deterministic as UTF-8.
+        // 让 python 输出编码稳定为 UTF-8，避免 Windows 默认 codepage 导致乱码/解析失败。
+        cmd.getEnvironment().put("PYTHONIOENCODING", "UTF-8");
+        cmd.getEnvironment().put("PYTHONUTF8", "1");
+        cmd.getEnvironment().put("PYTHONUNBUFFERED", "1");
+
+        cmd.addParameters("-c", PY_ENUM_DEVICES_SCRIPT);
         return cmd;
     }
 
