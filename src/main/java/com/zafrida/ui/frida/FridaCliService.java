@@ -355,8 +355,23 @@ public final class FridaCliService {
         cmd.withParentEnvironmentType(GeneralCommandLine.ParentEnvironmentType.CONSOLE);
         PythonEnvInfo env = ProjectPythonEnvResolver.resolve(project);
         if (env != null) {
+            // Prefer an absolute executable path when possible to avoid Windows CreateProcess PATH quirks.
+            // 尽量将可执行文件解析为绝对路径，避免 Windows 下 CreateProcess 对 PATH 搜索的兼容性差异。
+            String exe = cmd.getExePath();
+            if (ZaStrUtil.isNotBlank(exe) && !looksLikePath(exe)) {
+                String resolved = ProjectPythonEnvResolver.findTool(env, exe);
+                if (ZaStrUtil.isNotBlank(resolved)) {
+                    cmd.setExePath(resolved);
+                }
+            }
             ProjectPythonEnvResolver.applyToCommandLine(cmd, env);
         }
+    }
+
+    private static boolean looksLikePath(@NotNull String value) {
+        // Anything containing path separators is treated as a path (absolute or relative).
+        // 只要包含路径分隔符，就认为是路径（绝对或相对）。
+        return value.contains("/") || value.contains("\\");
     }
 
     /**

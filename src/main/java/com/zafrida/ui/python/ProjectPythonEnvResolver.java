@@ -1,6 +1,7 @@
 package com.zafrida.ui.python;
 
 import com.intellij.execution.configurations.GeneralCommandLine;
+import com.intellij.openapi.application.ReadAction;
 import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.projectRoots.Sdk;
@@ -55,11 +56,19 @@ public final class ProjectPythonEnvResolver {
      */
     public static @Nullable PythonEnvInfo resolve(@NotNull Project project) {
         try {
-            Sdk sdk = findPythonSdk(project);
-            if (sdk == null) return null;
+            if (project.isDisposed()) {
+                return null;
+            }
+
+            Sdk sdk = ReadAction.compute(() -> findPythonSdk(project));
+            if (sdk == null) {
+                return null;
+            }
 
             String homePath = sdk.getHomePath();
-            if (ZaStrUtil.isBlank(homePath)) return null;
+            if (ZaStrUtil.isBlank(homePath)) {
+                return null;
+            }
 
             // Some remote SDKs provide non-local paths (ssh://, docker://, etc.).
             // 某些远程 SDK 会返回非本地路径（如 ssh://、docker:// 等）。
