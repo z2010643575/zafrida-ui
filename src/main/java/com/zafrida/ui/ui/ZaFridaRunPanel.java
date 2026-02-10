@@ -140,6 +140,10 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
 
     /** 日志文件路径提示标签 */
     private final JLabel logFileLabel = new JLabel("Log: (not started)");
+    /** 定位日志文件按钮 */
+    private final JButton locateLogFileBtn = new JButton("");
+    /** 最近一次会话日志文件路径（用于定位按钮） */
+    private @Nullable String lastLogFilePath;
 
     /** 插件版本显示 */
     private final JLabel versionValueLabel = new JLabel();
@@ -225,7 +229,7 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
         row = addRow(form, row, new JLabel(""), buildButtonsRow());
 
         add(form, BorderLayout.NORTH);
-        add(logFileLabel, BorderLayout.SOUTH);
+        add(buildLogFileStatusPanel(), BorderLayout.SOUTH);
 
         initUiState();
         bindActions();
@@ -259,6 +263,9 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
         locateAttachScriptBtn.setIcon(AllIcons.General.Locate);
         locateAttachScriptBtn.setToolTipText("Locate attach script in Project View");
         chooseAttachScriptBtn.setIcon(AllIcons.Actions.MenuOpen);
+        locateLogFileBtn.setIcon(AllIcons.General.Locate);
+        locateLogFileBtn.setToolTipText("Locate log file in Project View");
+        locateLogFileBtn.setEnabled(false);
         runBtn.setIcon(AllIcons.Actions.Execute);
         attachBtn.setIcon(AllIcons.Actions.Execute);
         stopBtn.setIcon(AllIcons.Actions.Suspend);
@@ -458,6 +465,7 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
 
         locateRunScriptBtn.addActionListener(e -> locateRunScriptInProjectView());
         locateAttachScriptBtn.addActionListener(e -> locateAttachScriptInProjectView());
+        locateLogFileBtn.addActionListener(e -> locateLogFileInProjectView());
 
         consoleTabsPanel.addTabChangeListener(e -> updateRunningState());
 
@@ -1003,6 +1011,18 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
     }
 
     /**
+     * 构建底部日志状态栏。
+     * <p>
+     * 这里使用按钮（参考 locateRunScriptBtn），便于用户一键定位到日志文件。
+     */
+    private JPanel buildLogFileStatusPanel() {
+        JPanel p = new JPanel(new BorderLayout(8, 0));
+        p.add(logFileLabel, BorderLayout.CENTER);
+        p.add(locateLogFileBtn, BorderLayout.EAST);
+        return p;
+    }
+
+    /**
      * 向表单追加一行布局。
      * @param form 表单面板
      * @param row 当前行索引
@@ -1082,6 +1102,39 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
     }
 
     /**
+     * 在 Project 视图中定位日志文件。
+     */
+    private void locateLogFileInProjectView() {
+        String path = lastLogFilePath;
+        VirtualFile file = resolveLogFileForLocate();
+        if (file == null || !file.isValid() || file.isDirectory()) {
+            if (ZaStrUtil.isBlank(path)) {
+                ZaFridaNotifier.warn(project, "ZAFrida", "No log file yet");
+            } else {
+                String trimmed = path.trim();
+                if (trimmed.startsWith("(")) {
+                    ZaFridaNotifier.warn(project, "ZAFrida", String.format("Log file not available: %s", trimmed));
+                } else {
+                    // 文件找不到时，尝试先定位到日志目录（用户也能快速找到当前会话日志）
+                    File ioFile = new File(trimmed);
+                    File parent = ioFile.getParentFile();
+                    if (parent != null) {
+                        VirtualFile dir = LocalFileSystem.getInstance().refreshAndFindFileByIoFile(parent);
+                        if (dir != null && dir.isValid()) {
+                            ProjectFileUtil.openAndSelectInProject(project, dir);
+                            ZaFridaNotifier.warn(project, "ZAFrida", String.format("Log file not found, located directory: %s", parent.getAbsolutePath()));
+                            return;
+                        }
+                    }
+                    ZaFridaNotifier.warn(project, "ZAFrida", String.format("Log file not found: %s", trimmed));
+                }
+            }
+            return;
+        }
+        ProjectFileUtil.openAndSelectInProject(project, file);
+    }
+
+    /**
      * 解析可定位的 Run 脚本文件。
      * @return 脚本文件或 null
      */
@@ -1109,6 +1162,36 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
         String path = attachScriptField.getText();
         if (ZaStrUtil.isBlank(path)) return null;
         return LocalFileSystem.getInstance().findFileByPath(path.trim());
+    }
+
+    /**
+     * 解析可定位的日志文件。
+     * @return 日志文件或 null
+     */
+    private @Nullable VirtualFile resolveLogFileForLocate() {
+        String path = lastLogFilePath;
+        if (ZaStrUtil.isBlank(path)) {
+            return null;
+        }
+        String trimmed = path.trim();
+        if (trimmed.startsWith("(")) {
+            return null;
+        }
+        return LocalFileSystem.getInstance().refreshAndFindFileByPath(trimmed);
+    }
+
+    private void applyLogFilePath(@Nullable String logFilePath) {
+        this.lastLogFilePath = logFilePath;
+        if (ZaStrUtil.isBlank(logFilePath)) {
+            locateLogFileBtn.setEnabled(false);
+            return;
+        }
+        String trimmed = logFilePath.trim();
+        if (trimmed.startsWith("(")) {
+            locateLogFileBtn.setEnabled(false);
+        } else {
+            locateLogFileBtn.setEnabled(true);
+        }
     }
 
 
@@ -1756,6 +1839,7 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
 
             updateRunningState();
             logFileLabel.setText(String.format("Log: %s", session.getLogFilePath()));
+            applyLogFilePath(session.getLogFilePath());
             console.info(String.format("[ZAFrida] Log file: %s", session.getLogFilePath()));
         } catch (Throwable t) {
             console.error(String.format("[ZAFrida] Start failed: %s", t.getMessage()));
