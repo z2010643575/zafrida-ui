@@ -2,9 +2,7 @@ package com.zafrida.ui.ui;
 
 import com.intellij.openapi.Disposable;
 import com.intellij.openapi.application.ApplicationManager;
-import com.intellij.openapi.fileEditor.FileEditorManager;
 import com.intellij.openapi.project.Project;
-import com.intellij.openapi.util.SystemInfo;
 import com.zafrida.ui.adb.AdbService;
 import com.zafrida.ui.diagnostics.EnvironmentDoctorDialog;
 import com.intellij.icons.AllIcons;
@@ -50,7 +48,6 @@ import javax.swing.JButton;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import java.awt.BorderLayout;
-import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
@@ -63,7 +60,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
-import java.util.regex.Pattern;
 
 /**
  * [UI组件] 运行控制主面板。
@@ -141,17 +137,6 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
     private final JButton openAppBtn = new JButton("O App");
     /** 清空控制台按钮 */
     private final JButton clearConsoleBtn = new JButton("Clear Console");
-
-    /** 日志文件路径提示标签 */
-    private final JLabel logFileLabel = new JLabel("Log: (not started)");
-    /** 定位日志文件按钮 */
-    private final JButton locateLogFileBtn = new JButton("");
-    /** 打开日志文件按钮（IDE 编辑器） */
-    private final JButton openLogFileBtn = new JButton("");
-    /** 使用 VS Code 打开日志文件按钮 */
-    private final JButton openLogFileInVsCodeBtn = new JButton("");
-    /** 最近一次会话日志文件路径（用于定位按钮） */
-    private @Nullable String lastLogFilePath;
 
     /** 插件版本显示 */
     private final JLabel versionValueLabel = new JLabel();
@@ -237,7 +222,6 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
         row = addRow(form, row, new JLabel(""), buildButtonsRow());
 
         add(form, BorderLayout.NORTH);
-        add(buildLogFileStatusPanel(), BorderLayout.SOUTH);
 
         initUiState();
         bindActions();
@@ -271,18 +255,6 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
         locateAttachScriptBtn.setIcon(AllIcons.General.Locate);
         locateAttachScriptBtn.setToolTipText("Locate attach script in Project View");
         chooseAttachScriptBtn.setIcon(AllIcons.Actions.MenuOpen);
-        locateLogFileBtn.setIcon(AllIcons.General.Locate);
-        locateLogFileBtn.setToolTipText("Locate log file in Project View");
-        tuneLogStatusIconButton(locateLogFileBtn);
-        locateLogFileBtn.setEnabled(false);
-        openLogFileBtn.setIcon(AllIcons.Actions.EditSource);
-        openLogFileBtn.setToolTipText("Open log file in editor");
-        tuneLogStatusIconButton(openLogFileBtn);
-        openLogFileBtn.setEnabled(false);
-        openLogFileInVsCodeBtn.setIcon(ZaFridaIcons.VSCODE);
-        openLogFileInVsCodeBtn.setToolTipText("Open log file in VS Code");
-        tuneLogStatusIconButton(openLogFileInVsCodeBtn);
-        openLogFileInVsCodeBtn.setEnabled(false);
         runBtn.setIcon(AllIcons.Actions.Execute);
         attachBtn.setIcon(AllIcons.Actions.Execute);
         stopBtn.setIcon(AllIcons.Actions.Suspend);
@@ -482,9 +454,6 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
 
         locateRunScriptBtn.addActionListener(e -> locateRunScriptInProjectView());
         locateAttachScriptBtn.addActionListener(e -> locateAttachScriptInProjectView());
-        locateLogFileBtn.addActionListener(e -> locateLogFileInProjectView());
-        openLogFileBtn.addActionListener(e -> openLogFileInEditor());
-        openLogFileInVsCodeBtn.addActionListener(e -> openLogFileInVsCode());
 
         consoleTabsPanel.addTabChangeListener(e -> updateRunningState());
 
@@ -1030,22 +999,6 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
     }
 
     /**
-     * 构建底部日志状态栏。
-     * <p>
-     * 这里使用按钮（参考 locateRunScriptBtn），便于用户一键定位到日志文件。
-     */
-    private JPanel buildLogFileStatusPanel() {
-        JPanel p = new JPanel(new BorderLayout(8, 0));
-        p.add(logFileLabel, BorderLayout.CENTER);
-        JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 4, 0));
-        btnPanel.add(locateLogFileBtn);
-        btnPanel.add(openLogFileBtn);
-        btnPanel.add(openLogFileInVsCodeBtn);
-        p.add(btnPanel, BorderLayout.EAST);
-        return p;
-    }
-
-    /**
      * 向表单追加一行布局。
      * @param form 表单面板
      * @param row 当前行索引
@@ -1125,102 +1078,6 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
     }
 
     /**
-     * 在 Project 视图中定位日志文件。
-     */
-    private void locateLogFileInProjectView() {
-        String rawPath = lastLogFilePath;
-        String path = normalizeLogFilePath(rawPath);
-        if (path == null) {
-            notifyLogFileUnavailable(rawPath);
-            return;
-        }
-
-        ApplicationManager.getApplication().executeOnPooledThread(() -> {
-            VirtualFile file = LocalFileSystem.getInstance().refreshAndFindFileByPath(path);
-            if (file != null && file.isValid() && !file.isDirectory()) {
-                ApplicationManager.getApplication().invokeLater(() -> ProjectFileUtil.openAndSelectInProject(project, file));
-                return;
-            }
-
-            // 文件找不到时，尝试先定位到日志目录（用户也能快速找到当前会话日志）
-            File ioFile = new File(path);
-            File parent = ioFile.getParentFile();
-            if (parent != null) {
-                VirtualFile dir = LocalFileSystem.getInstance().refreshAndFindFileByIoFile(parent);
-                if (dir != null && dir.isValid()) {
-                    ApplicationManager.getApplication().invokeLater(() -> {
-                        ProjectFileUtil.openAndSelectInProject(project, dir);
-                        ZaFridaNotifier.warn(project, "ZAFrida", String.format("Log file not found, located directory: %s", parent.getAbsolutePath()));
-                    });
-                    return;
-                }
-            }
-
-            ApplicationManager.getApplication().invokeLater(() ->
-                    ZaFridaNotifier.warn(project, "ZAFrida", String.format("Log file not found: %s", path)));
-        });
-    }
-
-    private void openLogFileInEditor() {
-        String rawPath = lastLogFilePath;
-        String path = normalizeLogFilePath(rawPath);
-        if (path == null) {
-            notifyLogFileUnavailable(rawPath);
-            return;
-        }
-
-        ApplicationManager.getApplication().executeOnPooledThread(() -> {
-            VirtualFile file = LocalFileSystem.getInstance().refreshAndFindFileByPath(path);
-            if (file == null || !file.isValid() || file.isDirectory()) {
-                ApplicationManager.getApplication().invokeLater(() ->
-                        ZaFridaNotifier.warn(project, "ZAFrida", String.format("Log file not found: %s", path)));
-                return;
-            }
-            ApplicationManager.getApplication().invokeLater(() ->
-                    FileEditorManager.getInstance(project).openFile(file, true));
-        });
-    }
-
-    private void openLogFileInVsCode() {
-        String rawPath = lastLogFilePath;
-        String path = normalizeLogFilePath(rawPath);
-        if (path == null) {
-            notifyLogFileUnavailable(rawPath);
-            return;
-        }
-
-        ApplicationManager.getApplication().executeOnPooledThread(() -> {
-            File logFile = new File(path);
-            if (!logFile.exists() || !logFile.isFile()) {
-                ApplicationManager.getApplication().invokeLater(() ->
-                        ZaFridaNotifier.warn(project, "ZAFrida", String.format("Log file not found: %s", path)));
-                return;
-            }
-
-            VsCodeCommand cmd = resolveVsCodeCommand(logFile.getAbsolutePath());
-            if (cmd == null) {
-                ApplicationManager.getApplication().invokeLater(() -> ZaFridaNotifier.warn(
-                        project,
-                        "ZAFrida",
-                        "VS Code not found. Please install it or set VS Code path in Settings | ZAFrida."
-                ));
-                return;
-            }
-
-            try {
-                new ProcessBuilder(cmd.command).start();
-            } catch (Throwable t) {
-                String msg = t.getMessage();
-                ApplicationManager.getApplication().invokeLater(() -> ZaFridaNotifier.warn(
-                        project,
-                        "ZAFrida",
-                        String.format("Failed to open VS Code (%s): %s", cmd.debugName, msg)
-                ));
-            }
-        });
-    }
-
-    /**
      * 解析可定位的 Run 脚本文件。
      * @return 脚本文件或 null
      */
@@ -1248,227 +1105,6 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
         String path = attachScriptField.getText();
         if (ZaStrUtil.isBlank(path)) return null;
         return LocalFileSystem.getInstance().findFileByPath(path.trim());
-    }
-
-    private void applyLogFilePath(@Nullable String logFilePath) {
-        this.lastLogFilePath = logFilePath;
-        boolean enabled = normalizeLogFilePath(logFilePath) != null;
-        locateLogFileBtn.setEnabled(enabled);
-        openLogFileBtn.setEnabled(enabled);
-        openLogFileInVsCodeBtn.setEnabled(enabled);
-    }
-
-    private static void tuneLogStatusIconButton(@NotNull JButton btn) {
-        btn.setBorderPainted(false);
-        btn.setContentAreaFilled(false);
-        btn.setFocusPainted(false);
-        btn.setOpaque(false);
-        btn.setMargin(new Insets(0, 0, 0, 0));
-        btn.setPreferredSize(new Dimension(20, 20));
-    }
-
-    private static @Nullable String normalizeLogFilePath(@Nullable String rawPath) {
-        if (ZaStrUtil.isBlank(rawPath)) {
-            return null;
-        }
-        String trimmed = rawPath.trim();
-        if (trimmed.isEmpty()) {
-            return null;
-        }
-        if (trimmed.startsWith("(")) {
-            return null;
-        }
-        return trimmed;
-    }
-
-    private void notifyLogFileUnavailable(@Nullable String rawPath) {
-        if (ZaStrUtil.isBlank(rawPath)) {
-            ZaFridaNotifier.warn(project, "ZAFrida", "No log file yet");
-            return;
-        }
-        String trimmed = rawPath.trim();
-        if (trimmed.startsWith("(")) {
-            ZaFridaNotifier.warn(project, "ZAFrida", String.format("Log file not available: %s", trimmed));
-            return;
-        }
-        ZaFridaNotifier.warn(project, "ZAFrida", String.format("Log file not found: %s", trimmed));
-    }
-
-    private static final class VsCodeCommand {
-        private final @NotNull String debugName;
-        private final @NotNull List<String> command;
-
-        private VsCodeCommand(@NotNull String debugName, @NotNull List<String> command) {
-            this.debugName = debugName;
-            this.command = command;
-        }
-    }
-
-    private @Nullable VsCodeCommand resolveVsCodeCommand(@NotNull String filePath) {
-        ZaFridaSettingsState st = ApplicationManager.getApplication().getService(ZaFridaSettingsService.class).getState();
-        String configured = st.vscodeExecutable;
-        if (ZaStrUtil.isNotBlank(configured)) {
-            String exec = resolveVsCodeExecutable(configured.trim());
-            if (exec == null) {
-                return null;
-            }
-            return buildVsCodeOpenCommand(exec, filePath, true);
-        }
-
-        String exec = autoDetectVsCodeExecutable();
-        if (exec == null) {
-            return null;
-        }
-        return buildVsCodeOpenCommand(exec, filePath, false);
-    }
-
-    private @Nullable VsCodeCommand buildVsCodeOpenCommand(@NotNull String exec,
-                                                           @NotNull String filePath,
-                                                           boolean fromSettings) {
-        if (SystemInfo.isMac && exec.endsWith(".app")) {
-            List<String> cmd = new ArrayList<>();
-            cmd.add("open");
-            cmd.add("-a");
-            cmd.add(exec);
-            cmd.add(filePath);
-            return new VsCodeCommand(fromSettings ? "VS Code (settings)" : "VS Code (auto)", cmd);
-        }
-
-        if (SystemInfo.isWindows) {
-            if (exec.toLowerCase().endsWith(".exe")) {
-                List<String> cmd = new ArrayList<>();
-                cmd.add(exec);
-                cmd.add("-g");
-                cmd.add(filePath);
-                return new VsCodeCommand(fromSettings ? "VS Code (settings)" : "VS Code (auto)", cmd);
-            }
-            // code.cmd / code.bat / code (PATH) 需要走 cmd.exe
-            List<String> cmd = new ArrayList<>();
-            cmd.add("cmd.exe");
-            cmd.add("/c");
-            cmd.add(exec);
-            cmd.add("-g");
-            cmd.add(filePath);
-            return new VsCodeCommand(fromSettings ? "VS Code (settings)" : "VS Code (auto)", cmd);
-        }
-
-        List<String> cmd = new ArrayList<>();
-        cmd.add(exec);
-        cmd.add("-g");
-        cmd.add(filePath);
-        return new VsCodeCommand(fromSettings ? "VS Code (settings)" : "VS Code (auto)", cmd);
-    }
-
-    private @Nullable String resolveVsCodeExecutable(@NotNull String raw) {
-        if (raw.isEmpty()) {
-            return null;
-        }
-
-        // 允许用户配置 PATH 中的命令名（如 code / code.cmd）
-        if (!hasPathSeparator(raw)) {
-            File inPath = findInPathExecutable(raw);
-            if (inPath != null) {
-                return inPath.getAbsolutePath();
-            }
-            if (SystemInfo.isWindows) {
-                String lower = raw.toLowerCase();
-                if (!lower.endsWith(".cmd")) {
-                    inPath = findInPathExecutable(raw + ".cmd");
-                    if (inPath != null) {
-                        return inPath.getAbsolutePath();
-                    }
-                }
-                if (!lower.endsWith(".exe")) {
-                    inPath = findInPathExecutable(raw + ".exe");
-                    if (inPath != null) {
-                        return inPath.getAbsolutePath();
-                    }
-                }
-                if (!lower.endsWith(".bat")) {
-                    inPath = findInPathExecutable(raw + ".bat");
-                    if (inPath != null) {
-                        return inPath.getAbsolutePath();
-                    }
-                }
-            }
-            return null;
-        }
-
-        File f = new File(raw);
-        if (f.exists()) {
-            return f.getAbsolutePath();
-        }
-        return null;
-    }
-
-    private @Nullable String autoDetectVsCodeExecutable() {
-        // 1) PATH 优先
-        File inPath = findInPathExecutable(SystemInfo.isWindows ? "code.cmd" : "code");
-        if (inPath != null) {
-            return inPath.getAbsolutePath();
-        }
-        if (SystemInfo.isWindows) {
-            inPath = findInPathExecutable("code");
-            if (inPath != null) {
-                return inPath.getAbsolutePath();
-            }
-        }
-
-        // 2) macOS: /Applications 下的 app（不依赖 PATH）
-        if (SystemInfo.isMac) {
-            File app = new File("/Applications/Visual Studio Code.app");
-            if (app.exists() && app.isDirectory()) {
-                return app.getAbsolutePath();
-            }
-            return null;
-        }
-
-        // 3) Windows: 常见安装目录
-        if (SystemInfo.isWindows) {
-            List<File> candidates = new ArrayList<>();
-            String localAppData = System.getenv("LOCALAPPDATA");
-            if (ZaStrUtil.isNotBlank(localAppData)) {
-                candidates.add(new File(localAppData, "Programs\\Microsoft VS Code\\Code.exe"));
-            }
-            String programFiles = System.getenv("ProgramFiles");
-            if (ZaStrUtil.isNotBlank(programFiles)) {
-                candidates.add(new File(programFiles, "Microsoft VS Code\\Code.exe"));
-            }
-            String programFilesX86 = System.getenv("ProgramFiles(x86)");
-            if (ZaStrUtil.isNotBlank(programFilesX86)) {
-                candidates.add(new File(programFilesX86, "Microsoft VS Code\\Code.exe"));
-            }
-
-            for (File f : candidates) {
-                if (f.exists() && f.isFile()) {
-                    return f.getAbsolutePath();
-                }
-            }
-        }
-
-        return null;
-    }
-
-    private static boolean hasPathSeparator(@NotNull String s) {
-        return s.indexOf('/') >= 0 || s.indexOf('\\') >= 0;
-    }
-
-    private static @Nullable File findInPathExecutable(@NotNull String name) {
-        String pathEnv = System.getenv("PATH");
-        if (ZaStrUtil.isBlank(pathEnv)) {
-            return null;
-        }
-        String[] parts = pathEnv.split(Pattern.quote(File.pathSeparator));
-        for (String dir : parts) {
-            if (ZaStrUtil.isBlank(dir)) {
-                continue;
-            }
-            File f = new File(dir.trim(), name);
-            if (f.exists() && f.isFile()) {
-                return f;
-            }
-        }
-        return null;
     }
 
 
@@ -2115,8 +1751,7 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
             session.getProcessHandler().addProcessListener(sessionService.createUiStateListener(this::updateRunningState));
 
             updateRunningState();
-            logFileLabel.setText(String.format("Log: %s", session.getLogFilePath()));
-            applyLogFilePath(session.getLogFilePath());
+            console.setLogFilePath(session.getLogFilePath());
             console.info(String.format("[ZAFrida] Log file: %s", session.getLogFilePath()));
         } catch (Throwable t) {
             console.error(String.format("[ZAFrida] Start failed: %s", t.getMessage()));

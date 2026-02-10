@@ -20,7 +20,7 @@
 
 <a id="home"></a>
 
-## ZAFrida UI 使用教程 Wiki（v0.2.5）
+## ZAFrida UI 使用教程 Wiki（v0.2.6）
 
 > 适用读者：日常用 Frida 做 Android/iOS 逆向 / Hook 调试 / PoC 验证的人；希望把脚本、设备、目标、日志用“项目化方式”管理的人。
 

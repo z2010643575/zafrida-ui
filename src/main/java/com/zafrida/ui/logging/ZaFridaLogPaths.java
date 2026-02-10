@@ -15,7 +15,7 @@ import java.time.format.DateTimeFormatter;
  * [工具类] 日志文件路径生成策略。
  * <p>
  * <strong>命名规范：</strong>
- * {@code zafrida_{packageName}_{timestamp}.log}
+ * {@code zafrida_{timestamp}_{packageName}_{sessionTag}.log}
  * <p>
  * <strong>存储位置：</strong>
  * 优先存储在 ZAFrida 子项目目录下，如果未指定则存储在 IDE 项目根目录的 {@code zafrida-logs/} 文件夹中。
@@ -48,7 +48,7 @@ public final class ZaFridaLogPaths {
      * 在项目根目录创建日志文件（无包名）
      */
     public static @Nullable Path newSessionLogFile(@NotNull String projectBasePath) {
-        return newSessionLogFile(projectBasePath, null, null);
+        return newSessionLogFile(projectBasePath, null, null, "session");
     }
 
     /**
@@ -57,10 +57,12 @@ public final class ZaFridaLogPaths {
      * @param projectBasePath IDE 项目根目录
      * @param fridaProjectDir Frida 项目目录（可选，如果为空则使用项目根目录）
      * @param packageName     目标应用包名（可选，如果为空则不包含在文件名中）
+     * @param sessionTag      会话标识（run/attach 等），用于区分日志文件
      */
     public static @Nullable Path newSessionLogFile(@NotNull String projectBasePath,
                                                    @Nullable String fridaProjectDir,
-                                                   @Nullable String packageName) {
+                                                   @Nullable String packageName,
+                                                   @NotNull String sessionTag) {
         // 确定日志目录基础路径：优先使用 Frida 项目目录
         String basePath = ZaStrUtil.isNotBlank(fridaProjectDir)
                 ? fridaProjectDir
@@ -69,15 +71,17 @@ public final class ZaFridaLogPaths {
         Path dir = ensureLogsDir(basePath);
         if (dir == null) return null;
 
-        // 构建文件名：zafrida_{packageName}_{timestamp}.log 或 zafrida_{timestamp}.log
+        // 构建文件名：zafrida_{timestamp}_{packageName}_{sessionTag}.log 或 zafrida_{timestamp}_{sessionTag}.log
         String timestamp = LocalDateTime.now().format(FMT);
+        String safeSessionTag = sanitizeFileName(sessionTag);
         String name;
         if (ZaStrUtil.isNotBlank(packageName)) {
             // 清理包名中的非法字符
             String safePackageName = sanitizeFileName(packageName);
-            name = String.format("zafrida_%s_%s.log", safePackageName, timestamp);
+            // 时间戳放在前面，IDE 默认按文件名排序时 run/attach 更容易相邻显示
+            name = String.format("zafrida_%s_%s_%s.log", timestamp, safePackageName, safeSessionTag);
         } else {
-            name = String.format("zafrida_%s.log", timestamp);
+            name = String.format("zafrida_%s_%s.log", timestamp, safeSessionTag);
         }
 
         Path file = dir.resolve(name);

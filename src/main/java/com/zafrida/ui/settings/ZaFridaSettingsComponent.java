@@ -36,6 +36,7 @@ import java.util.List;
  * <strong>包含控件：</strong>
  * <ul>
  * <li>Frida 工具链路径输入框 (frida, frida-ps, frida-ls-devices)。</li>
+ * <li>VS Code 路径输入框（可选，用于一键打开日志文件）。</li>
  * <li>日志目录配置。</li>
  * <li>远程主机列表 (Remote Hosts) 管理。</li>
  * </ul>

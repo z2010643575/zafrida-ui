@@ -72,7 +72,11 @@ public final class ZaFridaSessionService implements Disposable {
         stop(type);
 
         String basePath = project.getBasePath();
-        Path logFile = basePath != null ? ZaFridaLogPaths.newSessionLogFile(basePath, fridaProjectDir, targetPackage) : null;
+        String sessionTag = "run";
+        if (type == ZaFridaSessionType.ATTACH) {
+            sessionTag = "attach";
+        }
+        Path logFile = basePath != null ? ZaFridaLogPaths.newSessionLogFile(basePath, fridaProjectDir, targetPackage, sessionTag) : null;
         String logPathStr = logFile != null ? logFile.toAbsolutePath().toString() : "(log disabled: project basePath is null)";
 
         SessionLogWriter writer = null;
