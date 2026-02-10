@@ -26,6 +26,9 @@ public final class ZaFridaIcons {
     /** Run 按钮图标 */
     public static final Icon RUN_FRIDA =
             IconLoader.getIcon("/META-INF/icons/run-frida.svg", ZaFridaIcons.class);
+    /** VS Code 图标（用于打开日志） */
+    public static final Icon VSCODE =
+            IconLoader.getIcon("/META-INF/icons/vscode.svg", ZaFridaIcons.class);
 
     /**
      * 根据平台选择图标。

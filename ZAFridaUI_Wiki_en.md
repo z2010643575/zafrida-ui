@@ -20,7 +20,7 @@
 
 <a id="home"></a>
 
-## ZAFrida UI User Wiki (v0.2.3)
+## ZAFrida UI User Wiki (v0.2.5)
 
 > Target readers: people who use Frida for Android/iOS reversing, Hook debugging, or PoC validation; and want to manage scripts, devices, targets, and logs in a project-style workflow.
 

@@ -73,6 +73,7 @@ public final class ZaFridaSettingsConfigurable implements SearchableConfigurable
         copy.fridaExecutable = settingsService.getState().fridaExecutable;
         copy.fridaPsExecutable = settingsService.getState().fridaPsExecutable;
         copy.fridaLsDevicesExecutable = settingsService.getState().fridaLsDevicesExecutable;
+        copy.vscodeExecutable = settingsService.getState().vscodeExecutable;
         copy.logsDirName = settingsService.getState().logsDirName;
         copy.defaultRemoteHost = settingsService.getState().defaultRemoteHost;
         copy.defaultRemotePort = settingsService.getState().defaultRemotePort;
@@ -92,6 +93,9 @@ public final class ZaFridaSettingsConfigurable implements SearchableConfigurable
             return true;
         }
         if (!safeEq(copy.fridaLsDevicesExecutable, current.fridaLsDevicesExecutable)) {
+            return true;
+        }
+        if (!safeEq(copy.vscodeExecutable, current.vscodeExecutable)) {
             return true;
         }
         if (!safeEq(copy.logsDirName, current.logsDirName)) {
@@ -135,6 +139,7 @@ public final class ZaFridaSettingsConfigurable implements SearchableConfigurable
         newState.fridaExecutable = settingsService.getState().fridaExecutable;
         newState.fridaPsExecutable = settingsService.getState().fridaPsExecutable;
         newState.fridaLsDevicesExecutable = settingsService.getState().fridaLsDevicesExecutable;
+        newState.vscodeExecutable = settingsService.getState().vscodeExecutable;
         newState.logsDirName = settingsService.getState().logsDirName;
         newState.defaultRemoteHost = settingsService.getState().defaultRemoteHost;
         newState.defaultRemotePort = settingsService.getState().defaultRemotePort;

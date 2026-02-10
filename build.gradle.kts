@@ -8,7 +8,7 @@ plugins {
 }
 
 group = "com.zafrida"
-version = "0.2.3"
+version = "0.2.5"
 
 repositories {
     mavenCentral()

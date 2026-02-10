@@ -22,6 +22,8 @@ public final class ZaFridaSettingsState {
     public String fridaPsExecutable = "frida-ps";
     /** frida-ls-devices 可执行文件路径 */
     public String fridaLsDevicesExecutable = "frida-ls-devices";
+    /** VS Code 可执行文件路径（可选：code / code.cmd / Code.exe / Visual Studio Code.app） */
+    public String vscodeExecutable = "";
     /** 日志目录名 */
     public String logsDirName = "zafrida-logs";
     /** 远程主机历史列表 */
