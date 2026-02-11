@@ -35,7 +35,7 @@ if (ObjC.available) {
     }
 
     // Get App Home Directory
-    var NSHomeDirectory = new NativeFunction(Module.findExportByName(null, "NSHomeDirectory"), 'pointer', []);
+    var NSHomeDirectory = new NativeFunction(Module.getGlobalExportByName("NSHomeDirectory"), 'pointer', []);
     var homeDir = new ObjC.Object(NSHomeDirectory()).toString();
 
     // List common interesting folders

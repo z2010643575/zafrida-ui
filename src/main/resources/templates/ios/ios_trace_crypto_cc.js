@@ -4,7 +4,7 @@
 if (ObjC.available) {
     console.log("[.] iOS CommonCrypto Monitor Loaded");
 
-    var CCCrypt = Module.findExportByName("libcommonCrypto.dylib", "CCCrypt");
+    var CCCrypt = Process.getModuleByName("libcommonCrypto.dylib").getExportByName("CCCrypt");
     if (CCCrypt) {
         Interceptor.attach(CCCrypt, {
             onEnter: function(args) {
@@ -48,7 +48,7 @@ if (ObjC.available) {
             if (len <= 0) return "(empty)";
             // Try reading as string first? Usually binary data in crypto.
             // Let's stick to hexdump for safety or a custom hex string
-            var buf = Memory.readByteArray(ptr, len);
+            var buf = ptr.readByteArray(len);
             return toHexString(new Uint8Array(buf));
         } catch (e) {
             return "(error reading memory)";

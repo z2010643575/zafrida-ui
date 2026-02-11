@@ -9,12 +9,13 @@ import org.jetbrains.annotations.NotNull;
  * 生成包含 {@code onEnter} (函数调用前，查看参数) 和 {@code onLeave} (函数返回后，查看返回值) 的标准监听结构。
  * <p>
  * <strong>依赖：</strong> 通常配合 {@code Module.findExportByName} 使用。
+ * 在Frida17版本之后取消了 {@code Module.findExportByName} 替换使用 {@code Module.findExportByName}
  */
 public class InsertInterceptorAttachAction extends InsertFridaSnippetAction {
     /** 内置代码片段 */
     private static final @NotNull String SNIPPET = String.join("\n",
             """
-                    Interceptor.attach(Module.findExportByName(null, "open"), {
+                    Interceptor.attach(Module.getGlobalExportByName('open'), {
                       onEnter: function (args) {
                         console.log("open called");
                       },

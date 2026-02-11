@@ -95,7 +95,8 @@ public final class TypingsInstaller {
             };
 
             declare const Module: {
-              findExportByName(module: string | null, name: string): NativePointer | null;
+              static findGlobalExportByName(name: string): NativePointer | null;
+              static getGlobalExportByName(name: string): NativePointer;
             };
 
             declare const Memory: {
