@@ -14,11 +14,11 @@ import java.util.List;
 import java.util.regex.Pattern;
 
 /**
- * [工具类] 用 VS Code 打开文件（自动探测可执行文件 + 支持用户在设置中指定路径）。
+ * [工具类] 用 VS Code 打开文件/目录（自动探测可执行文件 + 支持用户在设置中指定路径）。
  * <p>
  * 说明：
  * - 这是 UI 层的轻量封装：负责组装命令并启动外部进程。
- * - 调用方应优先使用 {@link #openFileInVsCodeAsync(Project, String)}，避免阻塞 EDT。
+ * - 调用方应优先使用 {@link #openPathInVsCodeAsync(Project, String)} / {@link #openFileInVsCodeAsync(Project, String)}，避免阻塞 EDT。
  */
 public final class ZaFridaVsCodeUtil {
 
@@ -30,6 +30,13 @@ public final class ZaFridaVsCodeUtil {
      */
     public static void openFileInVsCodeAsync(@NotNull Project project, @NotNull String filePath) {
         ApplicationManager.getApplication().executeOnPooledThread(() -> openFileInVsCode(project, filePath));
+    }
+
+    /**
+     * 在后台线程中打开文件或目录。
+     */
+    public static void openPathInVsCodeAsync(@NotNull Project project, @NotNull String path) {
+        ApplicationManager.getApplication().executeOnPooledThread(() -> openPathInVsCode(project, path));
     }
 
     /**
@@ -49,7 +56,28 @@ public final class ZaFridaVsCodeUtil {
             return;
         }
 
-        VsCodeCommand cmd = resolveVsCodeCommand(f.getAbsolutePath());
+        openPathInVsCode(project, f.getAbsolutePath());
+    }
+
+    /**
+     * 打开文件或目录（建议在后台线程调用）。
+     */
+    public static void openPathInVsCode(@NotNull Project project, @NotNull String path) {
+        if (ZaStrUtil.isBlank(path)) {
+            ApplicationManager.getApplication().invokeLater(() ->
+                    ZaFridaNotifier.warn(project, "ZAFrida", "No path"));
+            return;
+        }
+
+        File f = new File(path);
+        if (!f.exists()) {
+            ApplicationManager.getApplication().invokeLater(() ->
+                    ZaFridaNotifier.warn(project, "ZAFrida", String.format("Path not found: %s", f.getAbsolutePath())));
+            return;
+        }
+
+        boolean isDir = f.isDirectory();
+        VsCodeCommand cmd = resolveVsCodeCommand(f.getAbsolutePath(), isDir);
         if (cmd == null) {
             ApplicationManager.getApplication().invokeLater(() -> ZaFridaNotifier.warn(
                     project,
@@ -85,7 +113,7 @@ public final class ZaFridaVsCodeUtil {
         }
     }
 
-    private static @Nullable VsCodeCommand resolveVsCodeCommand(@NotNull String filePath) {
+    private static @Nullable VsCodeCommand resolveVsCodeCommand(@NotNull String path, boolean isDirectory) {
         ZaFridaSettingsState st = ApplicationManager.getApplication().getService(ZaFridaSettingsService.class).getState();
         String configured = st.vscodeExecutable;
         if (ZaStrUtil.isNotBlank(configured)) {
@@ -93,18 +121,19 @@ public final class ZaFridaVsCodeUtil {
             if (exec == null) {
                 return null;
             }
-            return buildVsCodeOpenCommand(exec, filePath, true);
+            return buildVsCodeOpenCommand(exec, path, isDirectory, true);
         }
 
         String exec = autoDetectVsCodeExecutable();
         if (exec == null) {
             return null;
         }
-        return buildVsCodeOpenCommand(exec, filePath, false);
+        return buildVsCodeOpenCommand(exec, path, isDirectory, false);
     }
 
     private static @Nullable VsCodeCommand buildVsCodeOpenCommand(@NotNull String exec,
-                                                                  @NotNull String filePath,
+                                                                  @NotNull String path,
+                                                                  boolean isDirectory,
                                                                   boolean fromSettings) {
         String debugName = "VS Code (auto)";
         if (fromSettings) {
@@ -116,7 +145,7 @@ public final class ZaFridaVsCodeUtil {
             cmd.add("open");
             cmd.add("-a");
             cmd.add(exec);
-            cmd.add(filePath);
+            cmd.add(path);
             return new VsCodeCommand(debugName, cmd);
         }
 
@@ -124,8 +153,10 @@ public final class ZaFridaVsCodeUtil {
             if (exec.toLowerCase().endsWith(".exe")) {
                 List<String> cmd = new ArrayList<>();
                 cmd.add(exec);
-                cmd.add("-g");
-                cmd.add(filePath);
+                if (!isDirectory) {
+                    cmd.add("-g");
+                }
+                cmd.add(path);
                 return new VsCodeCommand(debugName, cmd);
             }
             // code.cmd / code.bat / code (PATH) 需要走 cmd.exe
@@ -133,15 +164,19 @@ public final class ZaFridaVsCodeUtil {
             cmd.add("cmd.exe");
             cmd.add("/c");
             cmd.add(exec);
-            cmd.add("-g");
-            cmd.add(filePath);
+            if (!isDirectory) {
+                cmd.add("-g");
+            }
+            cmd.add(path);
             return new VsCodeCommand(debugName, cmd);
         }
 
         List<String> cmd = new ArrayList<>();
         cmd.add(exec);
-        cmd.add("-g");
-        cmd.add(filePath);
+        if (!isDirectory) {
+            cmd.add("-g");
+        }
+        cmd.add(path);
         return new VsCodeCommand(debugName, cmd);
     }
 
@@ -259,4 +294,3 @@ public final class ZaFridaVsCodeUtil {
         return null;
     }
 }
-
