@@ -165,3 +165,5 @@ ZAFrida UI 适用于所有使用 Frida 进行逆向工程的场景，特别是�
 * **小佳**
 * **Lane**
 * **迷人**
+
+更多贡献者与致谢信息请见：`CONTRIBUTORS.md`
