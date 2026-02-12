@@ -13,7 +13,7 @@ import java.util.regex.Pattern;
  */
 public final class FridaJsCompatibilityUtil {
 
-    // 兼容转换思路贡献者：Log（社区贡献）
+    // 兼容转换需求/思路来源：Log（社区贡献）；实现由 ZAFrida UI 维护。
 
     /** Module.findExportByName(null, "symbol") */
     private static final Pattern FIND_EXPORT_WITH_NULL_MODULE = Pattern.compile(
