@@ -135,8 +135,6 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
     private final JButton forceStopBtn = new JButton("S App");
     /** 打开 App 按钮 */
     private final JButton openAppBtn = new JButton("O App");
-    /** 清空控制台按钮 */
-    private final JButton clearConsoleBtn = new JButton("Console");
 
     /** 插件版本显示 */
     private final JLabel versionValueLabel = new JLabel();
@@ -264,8 +262,6 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
         forceStopBtn.setToolTipText("Force Stop App (adb force-stop)");
         openAppBtn.setIcon(AllIcons.Actions.Execute);
         openAppBtn.setToolTipText("Open App (adb)");
-        clearConsoleBtn.setIcon(AllIcons.Actions.ClearCash);
-        clearConsoleBtn.setToolTipText("Clear active console");
         initVersionInfo();
         updateRunningState();
     }
@@ -398,8 +394,6 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
             ApplicationManager.getApplication().getService(ZaFridaSettingsService.class).addRemoteHost(h);
             reloadDevicesAsync();
         });
-
-        clearConsoleBtn.addActionListener(e -> consoleTabsPanel.clearActiveConsole());
 
         runBtn.addActionListener(e -> runFrida());
         attachBtn.addActionListener(e -> attachFrida());
@@ -905,13 +899,6 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
     }
 
     /**
-     * 清空当前控制台。
-     */
-    public void triggerClearConsole() {
-        consoleTabsPanel.clearActiveConsole();
-    }
-
-    /**
      * 绑定外部 Run/Stop 按钮状态。
      * @param runButton 外部 Run 按钮
      * @param stopButton 外部 Stop 按钮
@@ -999,7 +986,6 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
         p.add(stopBtn);
         p.add(forceStopBtn);
         p.add(openAppBtn);
-        p.add(clearConsoleBtn);
         return p;
     }
 
