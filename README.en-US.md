@@ -164,4 +164,4 @@ Special thanks to the following contributors for providing core Frida JS script 
 * **Lane**
 * **迷人**
 
-For more contributors and acknowledgements, see: `CONTRIBUTORS.md`
+For more contributors and acknowledgements, see: [CONTRIBUTORS.md](CONTRIBUTORS.md)
