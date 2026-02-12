@@ -104,20 +104,20 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
     /** 刷新设备按钮 */
     private final JButton refreshDevicesBtn = new JButton("");
     /** 添加远程设备按钮 */
-    private final JButton addRemoteBtn = new JButton("Remote");
+    private final JButton addRemoteBtn = new JButton("");
 
     /** Run 脚本输入框 */
     private final JBTextField runScriptField = new JBTextField();
     /** 定位 Run 脚本按钮 */
     private final JButton locateRunScriptBtn = new JButton("");
     /** 选择 Run 脚本按钮 */
-    private final JButton chooseRunScriptBtn = new JButton("Choose...");
+    private final JButton chooseRunScriptBtn = new JButton("");
     /** Attach 脚本输入框 */
     private final JBTextField attachScriptField = new JBTextField();
     /** 定位 Attach 脚本按钮 */
     private final JButton locateAttachScriptBtn = new JButton("");
     /** 选择 Attach 脚本按钮 */
-    private final JButton chooseAttachScriptBtn = new JButton("Choose...");
+    private final JButton chooseAttachScriptBtn = new JButton("");
 
     /** 目标包名/进程输入框 */
     private final JBTextField targetField = new JBTextField();
@@ -127,14 +127,16 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
 
     /** Run 按钮 */
     private final JButton runBtn = new JButton("Run");
-    /** Attach 按钮 */
-    private final JButton attachBtn = new JButton("Attach");
     /** Stop 按钮 */
     private final JButton stopBtn = new JButton("Stop");
+    /** Attach 按钮 */
+    private final JButton attachBtn = new JButton("Attach");
+    /** Stop Attach 按钮 */
+    private final JButton stopAttachBtn = new JButton("StopAttach");
     /** 强制停止按钮 */
-    private final JButton forceStopBtn = new JButton("S App");
+    private final JButton forceStopBtn = new JButton("App");
     /** 打开 App 按钮 */
-    private final JButton openAppBtn = new JButton("O App");
+    private final JButton openAppBtn = new JButton("App");
 
     /** 插件版本显示 */
     private final JLabel versionValueLabel = new JLabel();
@@ -252,12 +254,19 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
         locateRunScriptBtn.setIcon(AllIcons.General.Locate);
         locateRunScriptBtn.setToolTipText("Locate run script in Project View");
         chooseRunScriptBtn.setIcon(AllIcons.Actions.MenuOpen);
+        chooseRunScriptBtn.setToolTipText("Choose run script");
         locateAttachScriptBtn.setIcon(AllIcons.General.Locate);
         locateAttachScriptBtn.setToolTipText("Locate attach script in Project View");
         chooseAttachScriptBtn.setIcon(AllIcons.Actions.MenuOpen);
+        chooseAttachScriptBtn.setToolTipText("Choose attach script");
         runBtn.setIcon(AllIcons.Actions.Execute);
+        runBtn.setToolTipText("Start Run session");
         attachBtn.setIcon(AllIcons.Actions.Execute);
+        attachBtn.setToolTipText("Start Attach session");
         stopBtn.setIcon(AllIcons.Actions.Suspend);
+        stopBtn.setToolTipText("Stop Run session");
+        stopAttachBtn.setIcon(AllIcons.Actions.Suspend);
+        stopAttachBtn.setToolTipText("Stop Attach session");
         forceStopBtn.setIcon(AllIcons.Actions.Cancel);
         forceStopBtn.setToolTipText("Force Stop App (adb force-stop)");
         openAppBtn.setIcon(AllIcons.Actions.Execute);
@@ -397,7 +406,8 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
 
         runBtn.addActionListener(e -> runFrida());
         attachBtn.addActionListener(e -> attachFrida());
-        stopBtn.addActionListener(e -> stopFrida());
+        stopBtn.addActionListener(e -> stopRunSession());
+        stopAttachBtn.addActionListener(e -> stopAttachSession());
         forceStopBtn.addActionListener(e -> forceStopApp());
         openAppBtn.addActionListener(e -> openApp());
 
@@ -881,7 +891,7 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
      */
     public void triggerStop() {
         if (!stopBtn.isEnabled()) return;
-        stopFrida();
+        stopRunSession();
     }
 
     /**
@@ -961,6 +971,8 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
     private JPanel buildTargetRow() {
         JPanel p = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
         p.add(targetField);
+        p.add(forceStopBtn);
+        p.add(openAppBtn);
         return p;
     }
 
@@ -982,10 +994,9 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
     private JPanel buildButtonsRow() {
         JPanel p = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
         p.add(runBtn);
-        p.add(attachBtn);
         p.add(stopBtn);
-        p.add(forceStopBtn);
-        p.add(openAppBtn);
+        p.add(attachBtn);
+        p.add(stopAttachBtn);
         return p;
     }
 
@@ -1753,8 +1764,15 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
     /**
      * 停止当前会话。
      */
-    private void stopFrida() {
-        ZaFridaSessionType type = resolveActiveSessionType();
+    private void stopRunSession() {
+        stopSession(ZaFridaSessionType.RUN);
+    }
+
+    private void stopAttachSession() {
+        stopSession(ZaFridaSessionType.ATTACH);
+    }
+
+    private void stopSession(@NotNull ZaFridaSessionType type) {
         sessionService.stop(type);
         updateRunningState();
         resolveConsoleForSessionType(type).info("[ZAFrida] Stopped");
@@ -1863,18 +1881,9 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
         boolean attachRunning = sessionService.isRunning(ZaFridaSessionType.ATTACH);
         runBtn.setEnabled(!runRunning);
         attachBtn.setEnabled(!attachRunning);
-        stopBtn.setEnabled(sessionService.isRunning(resolveActiveSessionType()));
+        stopBtn.setEnabled(runRunning);
+        stopAttachBtn.setEnabled(attachRunning);
         syncExternalRunStopButtons();
-    }
-
-    /**
-     * 根据当前控制台选中会话类型。
-     * @return 会话类型
-     */
-    private @NotNull ZaFridaSessionType resolveActiveSessionType() {
-        return consoleTabsPanel.getActiveConsolePanel() == attachConsolePanel
-                ? ZaFridaSessionType.ATTACH
-                : ZaFridaSessionType.RUN;
     }
 
     /**
