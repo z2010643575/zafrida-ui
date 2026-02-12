@@ -57,6 +57,8 @@ public final class ZaFridaConsolePanel extends JPanel implements Disposable {
     private final JButton openLogFileBtn = new JButton("");
     /** 使用 VS Code 打开日志文件按钮 */
     private final JButton openLogFileInVsCodeBtn = new JButton("");
+    /** 清空当前控制台按钮 */
+    private final JButton clearConsoleBtn = new JButton("");
     /** 最近一次会话日志文件路径（用于工具栏按钮） */
     private @Nullable String lastLogFilePath;
 
@@ -169,9 +171,14 @@ public final class ZaFridaConsolePanel extends JPanel implements Disposable {
         tuneLogToolbarIconButton(openLogFileInVsCodeBtn);
         openLogFileInVsCodeBtn.setEnabled(false);
 
+        clearConsoleBtn.setIcon(AllIcons.Actions.ClearCash);
+        clearConsoleBtn.setToolTipText("Clear console (does not affect log file)");
+        tuneLogToolbarIconButton(clearConsoleBtn);
+
         locateLogFileBtn.addActionListener(e -> locateLogFileInProjectView());
         openLogFileBtn.addActionListener(e -> openLogFileInEditor());
         openLogFileInVsCodeBtn.addActionListener(e -> openLogFileInVsCode());
+        clearConsoleBtn.addActionListener(e -> clear());
     }
 
     private JPanel buildTopToolbarPanel() {
@@ -186,6 +193,7 @@ public final class ZaFridaConsolePanel extends JPanel implements Disposable {
         panel.add(logFileLabel, BorderLayout.CENTER);
 
         JPanel actionsPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 4, 0));
+        actionsPanel.add(clearConsoleBtn);
         actionsPanel.add(locateLogFileBtn);
         actionsPanel.add(openLogFileBtn);
         actionsPanel.add(openLogFileInVsCodeBtn);
