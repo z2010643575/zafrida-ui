@@ -143,12 +143,12 @@ public final class ZaFridaMainToolWindow extends JPanel implements Disposable {
         stopBtn.setIcon(AllIcons.Actions.Suspend);
         stopBtn.addActionListener(e -> runPanel.triggerStop());
 
-        JButton forceStopBtn = new JButton("S App");
+        JButton forceStopBtn = new JButton("Stop App");
         forceStopBtn.setIcon(AllIcons.Actions.Cancel);
         forceStopBtn.setToolTipText("Force Stop App (adb force-stop)");
         forceStopBtn.addActionListener(e -> runPanel.triggerForceStop());
 
-        JButton openAppBtn = new JButton("O App");
+        JButton openAppBtn = new JButton("Open App");
         openAppBtn.setIcon(AllIcons.Actions.Execute);
         openAppBtn.setToolTipText("Open App (adb)");
         openAppBtn.addActionListener(e -> runPanel.triggerOpenApp());
