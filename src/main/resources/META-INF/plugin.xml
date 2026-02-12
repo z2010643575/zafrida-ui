@@ -48,6 +48,23 @@
     </extensions>
 
     <actions>
+        <action id="ZAFrida.OpenWithVsCode"
+                class="com.zafrida.ui.fridaproject.actions.OpenWithVsCodeAction"
+                text="Open with VSCode"
+                description="Open selected file/folder in VS Code"
+                icon="META-INF/icons/vscode.svg">
+            <add-to-group group-id="ProjectViewPopupMenu" anchor="before" relative-to-action="ZAFrida.NewProject"/>
+            <add-to-group group-id="EditorPopupMenu" anchor="after" relative-to-action="ZAFrida.EditorSnippets"/>
+        </action>
+        <action id="ZAFrida.OpenWith010Editor"
+                class="com.zafrida.ui.fridaproject.actions.OpenWith010EditorAction"
+                text="Open with 010Editor"
+                description="Open selected file in 010 Editor"
+                icon="META-INF/icons/editor-010.png">
+            <add-to-group group-id="ProjectViewPopupMenu" anchor="before" relative-to-action="ZAFrida.NewProject"/>
+            <add-to-group group-id="EditorPopupMenu" anchor="after" relative-to-action="ZAFrida.EditorSnippets"/>
+        </action>
+
         <action id="ZAFrida.NewProject"
                 class="com.zafrida.ui.fridaproject.actions.NewZaFridaProjectAction"
                 text="New Frida Project"
