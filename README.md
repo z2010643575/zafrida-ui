@@ -45,7 +45,7 @@ ZAFrida 并不替代 Frida，而是作为 `frida-tools` 的强大 UI 外壳，�
 
 交流群二维码
 -----------------------------------
-<img src="doc/wx_group_qrcode2.jpeg" alt="ZAFrida 交流群二维码" width="260" />
+<img src="doc/wx_group_qrcode3.jpeg" alt="ZAFrida 交流群二维码" width="260" />
 
 功能特性
 -----------------------------------
