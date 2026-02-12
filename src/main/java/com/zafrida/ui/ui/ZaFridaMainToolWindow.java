@@ -30,6 +30,8 @@ public final class ZaFridaMainToolWindow extends JPanel implements Disposable {
     private final ZaFridaRunPanel runPanel;
     /** 模板面板 */
     private final ZaFridaTemplatePanel templatePanel;
+    /** 工具面板（不常用功能集合） */
+    private final ZaFridaToolsPanel toolsPanel;
     /** 控制台选项卡面板 */
     private final ZaFridaConsoleTabsPanel consoleTabsPanel;
 
@@ -43,15 +45,19 @@ public final class ZaFridaMainToolWindow extends JPanel implements Disposable {
         this.consoleTabsPanel = new ZaFridaConsoleTabsPanel(project);
         this.templatePanel = new ZaFridaTemplatePanel(project, consoleTabsPanel.getRunConsolePanel());
         this.runPanel = new ZaFridaRunPanel(project, consoleTabsPanel, templatePanel);
+        this.toolsPanel = new ZaFridaToolsPanel(project, consoleTabsPanel);
 
         Disposer.register(this, consoleTabsPanel);
+        Disposer.register(this, templatePanel);
         Disposer.register(this, runPanel);
+        Disposer.register(this, toolsPanel);
 
         tabbedPane = new JBTabbedPane();
         tabbedPane.setTabComponentInsets(JBUI.emptyInsets());
 
         tabbedPane.addTab("Run", runPanel);
         tabbedPane.addTab("Templates", templatePanel);
+        tabbedPane.addTab("Tools", toolsPanel);
 
         JPanel header = buildHeader();
         JPanel topContainer = new JPanel(new BorderLayout());

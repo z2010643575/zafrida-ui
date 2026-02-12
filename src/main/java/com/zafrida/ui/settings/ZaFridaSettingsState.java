@@ -7,7 +7,7 @@ import java.util.List;
  * <p>
  * <strong>数据流：</strong>
  * 映射到 IDE 配置目录下的 {@code zafrida.xml} 文件。
- * 存储不随项目改变的通用设置，如 frida 工具链路径、VS Code 路径和常用远程主机列表。
+ * 存储不随项目改变的通用设置，如 frida 工具链路径、VS Code/010 Editor 路径和常用远程主机列表。
  */
 public final class ZaFridaSettingsState {
 
@@ -26,6 +26,8 @@ public final class ZaFridaSettingsState {
     public String fridaVersion = "16";
     /** VS Code 可执行文件路径（可选：code / code.cmd / Code.exe / Visual Studio Code.app） */
     public String vscodeExecutable = "";
+    /** 010 Editor 可执行文件路径（可选：010editor / 010Editor.exe / 010 Editor.app） */
+    public String editor010Executable = "";
     /** 日志目录名 */
     public String logsDirName = "zafrida-logs";
     /** 远程主机历史列表 */
