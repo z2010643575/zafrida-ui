@@ -147,7 +147,7 @@ public final class ZaFridaMainToolWindow extends JPanel implements Disposable {
         openAppBtn.setIcon(AllIcons.Actions.Execute);
         openAppBtn.addActionListener(e -> runPanel.triggerOpenApp());
 
-        JButton clearConsoleBtn = new JButton("Clear Console");
+        JButton clearConsoleBtn = new JButton("Console");
         clearConsoleBtn.setIcon(AllIcons.Actions.ClearCash);
         clearConsoleBtn.addActionListener(e -> runPanel.triggerClearConsole());
 
