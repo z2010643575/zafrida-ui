@@ -136,7 +136,7 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
     /** 打开 App 按钮 */
     private final JButton openAppBtn = new JButton("O App");
     /** 清空控制台按钮 */
-    private final JButton clearConsoleBtn = new JButton("Clear Console");
+    private final JButton clearConsoleBtn = new JButton("Console");
 
     /** 插件版本显示 */
     private final JLabel versionValueLabel = new JLabel();
