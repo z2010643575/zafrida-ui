@@ -13,15 +13,13 @@ import com.intellij.openapi.project.Project;
 import com.intellij.openapi.editor.Document;
 import com.intellij.openapi.editor.Editor;
 import com.intellij.openapi.editor.ScrollType;
-import com.intellij.openapi.util.SystemInfo;
 import com.intellij.openapi.vfs.LocalFileSystem;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.ui.SearchTextField;
-import com.zafrida.ui.settings.ZaFridaSettingsService;
-import com.zafrida.ui.settings.ZaFridaSettingsState;
 import com.zafrida.ui.util.ProjectFileUtil;
 import com.zafrida.ui.util.ZaFridaIcons;
 import com.zafrida.ui.util.ZaFridaNotifier;
+import com.zafrida.ui.util.ZaFridaVsCodeUtil;
 import com.zafrida.ui.util.ZaStrUtil;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -34,9 +32,6 @@ import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Insets;
 import java.io.File;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.regex.Pattern;
 
 /**
  * [UI组件] 自定义控制台面板。
@@ -283,36 +278,7 @@ public final class ZaFridaConsolePanel extends JPanel implements Disposable {
             notifyLogFileUnavailable(rawPath);
             return;
         }
-
-        ApplicationManager.getApplication().executeOnPooledThread(() -> {
-            File logFile = new File(path);
-            if (!logFile.exists() || !logFile.isFile()) {
-                ApplicationManager.getApplication().invokeLater(() ->
-                        ZaFridaNotifier.warn(project, "ZAFrida", String.format("Log file not found: %s", path)));
-                return;
-            }
-
-            VsCodeCommand cmd = resolveVsCodeCommand(logFile.getAbsolutePath());
-            if (cmd == null) {
-                ApplicationManager.getApplication().invokeLater(() -> ZaFridaNotifier.warn(
-                        project,
-                        "ZAFrida",
-                        "VS Code not found. Please install it or set VS Code path in Settings | ZAFrida."
-                ));
-                return;
-            }
-
-            try {
-                new ProcessBuilder(cmd.command).start();
-            } catch (Throwable t) {
-                String msg = t.getMessage();
-                ApplicationManager.getApplication().invokeLater(() -> ZaFridaNotifier.warn(
-                        project,
-                        "ZAFrida",
-                        String.format("Failed to open VS Code (%s): %s", cmd.debugName, msg)
-                ));
-            }
-        });
+        ZaFridaVsCodeUtil.openFileInVsCodeAsync(project, path);
     }
 
     private static void tuneLogToolbarIconButton(@NotNull JButton btn) {
@@ -349,190 +315,6 @@ public final class ZaFridaConsolePanel extends JPanel implements Disposable {
             return;
         }
         ZaFridaNotifier.warn(project, "ZAFrida", String.format("Log file not found: %s", trimmed));
-    }
-
-    private static final class VsCodeCommand {
-        private final @NotNull String debugName;
-        private final @NotNull List<String> command;
-
-        private VsCodeCommand(@NotNull String debugName, @NotNull List<String> command) {
-            this.debugName = debugName;
-            this.command = command;
-        }
-    }
-
-    private @Nullable VsCodeCommand resolveVsCodeCommand(@NotNull String filePath) {
-        ZaFridaSettingsState st = ApplicationManager.getApplication().getService(ZaFridaSettingsService.class).getState();
-        String configured = st.vscodeExecutable;
-        if (ZaStrUtil.isNotBlank(configured)) {
-            String exec = resolveVsCodeExecutable(configured.trim());
-            if (exec == null) {
-                return null;
-            }
-            return buildVsCodeOpenCommand(exec, filePath, true);
-        }
-
-        String exec = autoDetectVsCodeExecutable();
-        if (exec == null) {
-            return null;
-        }
-        return buildVsCodeOpenCommand(exec, filePath, false);
-    }
-
-    private @Nullable VsCodeCommand buildVsCodeOpenCommand(@NotNull String exec,
-                                                           @NotNull String filePath,
-                                                           boolean fromSettings) {
-        String debugName = "VS Code (auto)";
-        if (fromSettings) {
-            debugName = "VS Code (settings)";
-        }
-
-        if (SystemInfo.isMac && exec.endsWith(".app")) {
-            List<String> cmd = new ArrayList<>();
-            cmd.add("open");
-            cmd.add("-a");
-            cmd.add(exec);
-            cmd.add(filePath);
-            return new VsCodeCommand(debugName, cmd);
-        }
-
-        if (SystemInfo.isWindows) {
-            if (exec.toLowerCase().endsWith(".exe")) {
-                List<String> cmd = new ArrayList<>();
-                cmd.add(exec);
-                cmd.add("-g");
-                cmd.add(filePath);
-                return new VsCodeCommand(debugName, cmd);
-            }
-            // code.cmd / code.bat / code (PATH) 需要走 cmd.exe
-            List<String> cmd = new ArrayList<>();
-            cmd.add("cmd.exe");
-            cmd.add("/c");
-            cmd.add(exec);
-            cmd.add("-g");
-            cmd.add(filePath);
-            return new VsCodeCommand(debugName, cmd);
-        }
-
-        List<String> cmd = new ArrayList<>();
-        cmd.add(exec);
-        cmd.add("-g");
-        cmd.add(filePath);
-        return new VsCodeCommand(debugName, cmd);
-    }
-
-    private @Nullable String resolveVsCodeExecutable(@NotNull String raw) {
-        if (raw.isEmpty()) {
-            return null;
-        }
-
-        // 允许用户配置 PATH 中的命令名（如 code / code.cmd）
-        if (!hasPathSeparator(raw)) {
-            File inPath = findInPathExecutable(raw);
-            if (inPath != null) {
-                return inPath.getAbsolutePath();
-            }
-            if (SystemInfo.isWindows) {
-                String lower = raw.toLowerCase();
-                if (!lower.endsWith(".cmd")) {
-                    inPath = findInPathExecutable(raw + ".cmd");
-                    if (inPath != null) {
-                        return inPath.getAbsolutePath();
-                    }
-                }
-                if (!lower.endsWith(".exe")) {
-                    inPath = findInPathExecutable(raw + ".exe");
-                    if (inPath != null) {
-                        return inPath.getAbsolutePath();
-                    }
-                }
-                if (!lower.endsWith(".bat")) {
-                    inPath = findInPathExecutable(raw + ".bat");
-                    if (inPath != null) {
-                        return inPath.getAbsolutePath();
-                    }
-                }
-            }
-            return null;
-        }
-
-        File f = new File(raw);
-        if (f.exists()) {
-            return f.getAbsolutePath();
-        }
-        return null;
-    }
-
-    private @Nullable String autoDetectVsCodeExecutable() {
-        // 1) PATH 优先
-        File inPath = null;
-        if (SystemInfo.isWindows) {
-            inPath = findInPathExecutable("code.cmd");
-            if (inPath == null) {
-                inPath = findInPathExecutable("code");
-            }
-        } else {
-            inPath = findInPathExecutable("code");
-        }
-        if (inPath != null) {
-            return inPath.getAbsolutePath();
-        }
-
-        // 2) macOS: /Applications 下的 app（不依赖 PATH）
-        if (SystemInfo.isMac) {
-            File app = new File("/Applications/Visual Studio Code.app");
-            if (app.exists() && app.isDirectory()) {
-                return app.getAbsolutePath();
-            }
-            return null;
-        }
-
-        // 3) Windows: 常见安装目录
-        if (SystemInfo.isWindows) {
-            List<File> candidates = new ArrayList<>();
-            String localAppData = System.getenv("LOCALAPPDATA");
-            if (ZaStrUtil.isNotBlank(localAppData)) {
-                candidates.add(new File(localAppData, "Programs\\Microsoft VS Code\\Code.exe"));
-            }
-            String programFiles = System.getenv("ProgramFiles");
-            if (ZaStrUtil.isNotBlank(programFiles)) {
-                candidates.add(new File(programFiles, "Microsoft VS Code\\Code.exe"));
-            }
-            String programFilesX86 = System.getenv("ProgramFiles(x86)");
-            if (ZaStrUtil.isNotBlank(programFilesX86)) {
-                candidates.add(new File(programFilesX86, "Microsoft VS Code\\Code.exe"));
-            }
-
-            for (File f : candidates) {
-                if (f.exists() && f.isFile()) {
-                    return f.getAbsolutePath();
-                }
-            }
-        }
-
-        return null;
-    }
-
-    private static boolean hasPathSeparator(@NotNull String s) {
-        return s.indexOf('/') >= 0 || s.indexOf('\\') >= 0;
-    }
-
-    private static @Nullable File findInPathExecutable(@NotNull String name) {
-        String pathEnv = System.getenv("PATH");
-        if (ZaStrUtil.isBlank(pathEnv)) {
-            return null;
-        }
-        String[] parts = pathEnv.split(Pattern.quote(File.pathSeparator));
-        for (String dir : parts) {
-            if (ZaStrUtil.isBlank(dir)) {
-                continue;
-            }
-            File f = new File(dir.trim(), name);
-            if (f.exists() && f.isFile()) {
-                return f;
-            }
-        }
-        return null;
     }
 
     /**

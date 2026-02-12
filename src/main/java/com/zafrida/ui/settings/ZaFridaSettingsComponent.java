@@ -37,6 +37,7 @@ import java.util.List;
  * <ul>
  * <li>Frida 工具链路径输入框 (frida, frida-ps, frida-ls-devices)。</li>
  * <li>VS Code 路径输入框（可选，用于一键打开日志文件）。</li>
+ * <li>010 Editor 路径输入框（可选，用于一键打开二进制日志/trace 文件）。</li>
  * <li>日志目录配置。</li>
  * <li>远程主机列表 (Remote Hosts) 管理。</li>
  * </ul>
@@ -59,6 +60,8 @@ public final class ZaFridaSettingsComponent {
     private final JBTextField fridaVersionField = new JBTextField();
     /** VS Code 路径输入框 */
     private final JBTextField vscodeField = new JBTextField();
+    /** 010 Editor 路径输入框 */
+    private final JBTextField editor010Field = new JBTextField();
     /** 日志目录输入框 */
     private final JBTextField logsDirField = new JBTextField();
     /** 默认远程主机输入框 */
@@ -108,6 +111,8 @@ public final class ZaFridaSettingsComponent {
         fridaVersionField.setToolTipText("Frida major version. e.g. 16 / 17");
         vscodeField.getEmptyText().setText("code / code.cmd / Code.exe");
         vscodeField.setToolTipText("Optional. Used for opening log file in VS Code.");
+        editor010Field.getEmptyText().setText("/Applications/010 Editor.app / 010Editor.exe");
+        editor010Field.setToolTipText("Optional. Used for opening file in 010 Editor.");
         JPanel defaultRemotePanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
         defaultRemotePanel.add(defaultRemoteHostField);
         defaultRemotePanel.add(new JLabel(":"));
@@ -133,6 +138,7 @@ public final class ZaFridaSettingsComponent {
                 .addLabeledComponent("frida-ls-devices", fridaLsDevicesField, 1, false)
                 .addLabeledComponent("Frida Version", fridaVersionField, 1, false)
                 .addLabeledComponent("VS Code (optional)", vscodeField, 1, false)
+                .addLabeledComponent("010 Editor (optional)", editor010Field, 1, false)
                 .addLabeledComponent("Logs Dir (relative to project)", logsDirField, 1, false)
                 .addLabeledComponent("Templates Root", templatesRootModeCombo, 1, false)
                 .addLabeledComponent("Templates Path", templatesRootPathField, 1, false)
@@ -177,6 +183,7 @@ public final class ZaFridaSettingsComponent {
         fridaLsDevicesField.setText(orDefault(state.fridaLsDevicesExecutable, "frida-ls-devices"));
         fridaVersionField.setText(normalizeFridaVersion(state.fridaVersion));
         vscodeField.setText(orDefault(state.vscodeExecutable, ""));
+        editor010Field.setText(orDefault(state.editor010Executable, ""));
         logsDirField.setText(orDefault(state.logsDirName, "zafrida-logs"));
         defaultRemoteHostField.setText(orDefault(state.defaultRemoteHost, "127.0.0.1"));
         defaultRemotePortField.setText(String.valueOf(state.defaultRemotePort > 0 ? state.defaultRemotePort : 14725));
@@ -202,6 +209,7 @@ public final class ZaFridaSettingsComponent {
         state.fridaLsDevicesExecutable = textOrDefault(fridaLsDevicesField.getText(), "frida-ls-devices");
         state.fridaVersion = normalizeFridaVersion(fridaVersionField.getText());
         state.vscodeExecutable = textOrDefault(vscodeField.getText(), "");
+        state.editor010Executable = textOrDefault(editor010Field.getText(), "");
         state.logsDirName = textOrDefault(logsDirField.getText(), "zafrida-logs");
         state.defaultRemoteHost = textOrDefault(defaultRemoteHostField.getText(), "127.0.0.1");
         state.defaultRemotePort = parsePort(defaultRemotePortField.getText(), 14725);

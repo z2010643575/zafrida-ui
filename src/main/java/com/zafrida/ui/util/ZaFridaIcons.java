@@ -29,6 +29,9 @@ public final class ZaFridaIcons {
     /** VS Code 图标（用于打开日志） */
     public static final Icon VSCODE =
             IconLoader.getIcon("/META-INF/icons/vscode.svg", ZaFridaIcons.class);
+    /** 010 Editor 图标（用于打开二进制日志等文件） */
+    public static final Icon EDITOR_010 =
+            IconLoader.getIcon("/META-INF/icons/editor-010.png", ZaFridaIcons.class);
 
     /**
      * 根据平台选择图标。
@@ -36,7 +39,12 @@ public final class ZaFridaIcons {
      * @return 图标或 null
      */
     public static @Nullable Icon forPlatform(@Nullable ZaFridaPlatform platform) {
-        if (platform == null) return null;
-        return platform == ZaFridaPlatform.ANDROID ? ANDROID : IOS;
+        if (platform == null) {
+            return null;
+        }
+        if (platform == ZaFridaPlatform.ANDROID) {
+            return ANDROID;
+        }
+        return IOS;
     }
 }
