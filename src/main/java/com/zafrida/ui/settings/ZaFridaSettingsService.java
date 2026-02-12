@@ -4,6 +4,7 @@ import com.intellij.openapi.components.PersistentStateComponent;
 import com.intellij.openapi.components.State;
 import com.intellij.openapi.components.Storage;
 import com.intellij.util.xmlb.XmlSerializerUtil;
+import com.zafrida.ui.util.ZaStrUtil;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -22,6 +23,11 @@ import java.util.List;
         storages = {@Storage("zafrida.xml")}
 )
 public final class ZaFridaSettingsService implements PersistentStateComponent<ZaFridaSettingsState> {
+
+    /** 默认 Frida 主版本 */
+    public static final String DEFAULT_FRIDA_VERSION = "16";
+    /** Frida 17 主版本阈值 */
+    private static final String FRIDA_17_VERSION = "17";
 
     /** 持久化状态对象 */
     private final ZaFridaSettingsState state = new ZaFridaSettingsState();
@@ -42,6 +48,9 @@ public final class ZaFridaSettingsService implements PersistentStateComponent<Za
     @Override
     public void loadState(@NotNull ZaFridaSettingsState loaded) {
         XmlSerializerUtil.copyBean(loaded, state);
+        if (ZaStrUtil.isBlank(state.fridaVersion)) {
+            state.fridaVersion = DEFAULT_FRIDA_VERSION;
+        }
     }
 
     /**
@@ -81,5 +90,24 @@ public final class ZaFridaSettingsService implements PersistentStateComponent<Za
      */
     public @Nullable String getFridaExecutable() {
         return state.fridaExecutable;
+    }
+
+    /**
+     * 获取 Frida 主版本号（默认返回 16）。
+     * @return 版本号字符串
+     */
+    public @NotNull String getFridaVersion() {
+        if (ZaStrUtil.isBlank(state.fridaVersion)) {
+            return DEFAULT_FRIDA_VERSION;
+        }
+        return state.fridaVersion.trim();
+    }
+
+    /**
+     * 是否为 Frida 17 及以上版本。
+     * @return true 表示为 17+
+     */
+    public boolean isFrida17OrLater() {
+        return ZaStrUtil.compareVersion(getFridaVersion(), FRIDA_17_VERSION) >= 0;
     }
 }

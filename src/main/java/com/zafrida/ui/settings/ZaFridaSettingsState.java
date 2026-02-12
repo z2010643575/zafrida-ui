@@ -22,6 +22,8 @@ public final class ZaFridaSettingsState {
     public String fridaPsExecutable = "frida-ps";
     /** frida-ls-devices 可执行文件路径 */
     public String fridaLsDevicesExecutable = "frida-ls-devices";
+    /** Frida 主版本号（默认 16，用于兼容脚本片段差异） */
+    public String fridaVersion = "16";
     /** VS Code 可执行文件路径（可选：code / code.cmd / Code.exe / Visual Studio Code.app） */
     public String vscodeExecutable = "";
     /** 日志目录名 */

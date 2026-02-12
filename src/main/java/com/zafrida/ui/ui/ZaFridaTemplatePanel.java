@@ -32,7 +32,9 @@ import com.zafrida.ui.templates.ZaFridaTemplate;
 import com.zafrida.ui.templates.ZaFridaTemplateCategory;
 import com.zafrida.ui.templates.ZaFridaTemplateService;
 import com.zafrida.ui.util.ProjectFileUtil;
+import com.zafrida.ui.util.FridaJsCompatibilityUtil;
 import com.zafrida.ui.util.ZaStrUtil;
+import com.zafrida.ui.settings.ZaFridaSettingsService;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -344,14 +346,31 @@ public final class ZaFridaTemplatePanel extends JPanel implements Disposable {
             }
             sb.append("\n");
             sb.append(startMarker).append("\n");
-            sb.append(template.getContent());
-            if (!template.getContent().endsWith("\n")) {
+            String rawTemplate = template.getContent();
+            String convertedTemplate = adaptTemplateForConfiguredFridaVersion(rawTemplate);
+            sb.append(convertedTemplate);
+            if (!convertedTemplate.endsWith("\n")) {
                 sb.append("\n");
             }
             sb.append(endMarker).append("\n");
 
             document.insertString(document.getTextLength(), sb.toString());
         });
+    }
+
+    /**
+     * 按设置中的 Frida 版本对插入模板做兼容转换。
+     * <p>
+     * 注意：仅用于“首次插入”模板块。对于已插入且被用户修改过的模板内容，不做二次替换，避免破坏用户修改。
+     *
+     * @param rawTemplate 原始模板内容（默认按 Frida16 编写）
+     * @return 转换后的模板内容
+     */
+    private static @NotNull String adaptTemplateForConfiguredFridaVersion(@NotNull String rawTemplate) {
+        ZaFridaSettingsService settingsService =
+                ApplicationManager.getApplication().getService(ZaFridaSettingsService.class);
+        boolean frida17OrLater = settingsService != null && settingsService.isFrida17OrLater();
+        return FridaJsCompatibilityUtil.adaptForFridaVersion(rawTemplate, frida17OrLater);
     }
 
     /**

@@ -55,6 +55,8 @@ public final class ZaFridaSettingsComponent {
     private final JBTextField fridaPsField = new JBTextField();
     /** frida-ls-devices 路径输入框 */
     private final JBTextField fridaLsDevicesField = new JBTextField();
+    /** Frida 主版本输入框 */
+    private final JBTextField fridaVersionField = new JBTextField();
     /** VS Code 路径输入框 */
     private final JBTextField vscodeField = new JBTextField();
     /** 日志目录输入框 */
@@ -99,8 +101,11 @@ public final class ZaFridaSettingsComponent {
 
         defaultRemoteHostField.setColumns(16);
         defaultRemotePortField.setColumns(6);
+        fridaVersionField.setColumns(6);
         defaultRemoteHostField.getEmptyText().setText("127.0.0.1");
         defaultRemotePortField.getEmptyText().setText("14725");
+        fridaVersionField.getEmptyText().setText(ZaFridaSettingsService.DEFAULT_FRIDA_VERSION);
+        fridaVersionField.setToolTipText("Frida major version. e.g. 16 / 17");
         vscodeField.getEmptyText().setText("code / code.cmd / Code.exe");
         vscodeField.setToolTipText("Optional. Used for opening log file in VS Code.");
         JPanel defaultRemotePanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
@@ -126,6 +131,7 @@ public final class ZaFridaSettingsComponent {
                 .addLabeledComponent("frida", fridaField, 1, false)
                 .addLabeledComponent("frida-ps", fridaPsField, 1, false)
                 .addLabeledComponent("frida-ls-devices", fridaLsDevicesField, 1, false)
+                .addLabeledComponent("Frida Version", fridaVersionField, 1, false)
                 .addLabeledComponent("VS Code (optional)", vscodeField, 1, false)
                 .addLabeledComponent("Logs Dir (relative to project)", logsDirField, 1, false)
                 .addLabeledComponent("Templates Root", templatesRootModeCombo, 1, false)
@@ -169,6 +175,7 @@ public final class ZaFridaSettingsComponent {
         fridaField.setText(orDefault(state.fridaExecutable, "frida"));
         fridaPsField.setText(orDefault(state.fridaPsExecutable, "frida-ps"));
         fridaLsDevicesField.setText(orDefault(state.fridaLsDevicesExecutable, "frida-ls-devices"));
+        fridaVersionField.setText(normalizeFridaVersion(state.fridaVersion));
         vscodeField.setText(orDefault(state.vscodeExecutable, ""));
         logsDirField.setText(orDefault(state.logsDirName, "zafrida-logs"));
         defaultRemoteHostField.setText(orDefault(state.defaultRemoteHost, "127.0.0.1"));
@@ -193,6 +200,7 @@ public final class ZaFridaSettingsComponent {
         state.fridaExecutable = textOrDefault(fridaField.getText(), "frida");
         state.fridaPsExecutable = textOrDefault(fridaPsField.getText(), "frida-ps");
         state.fridaLsDevicesExecutable = textOrDefault(fridaLsDevicesField.getText(), "frida-ls-devices");
+        state.fridaVersion = normalizeFridaVersion(fridaVersionField.getText());
         state.vscodeExecutable = textOrDefault(vscodeField.getText(), "");
         state.logsDirName = textOrDefault(logsDirField.getText(), "zafrida-logs");
         state.defaultRemoteHost = textOrDefault(defaultRemoteHostField.getText(), "127.0.0.1");
@@ -414,6 +422,22 @@ public final class ZaFridaSettingsComponent {
         } catch (NumberFormatException e) {
             return fallback;
         }
+    }
+
+    /**
+     * 标准化 Frida 版本输入值。
+     * @param versionText 原始文本
+     * @return 标准化版本号
+     */
+    private static @NotNull String normalizeFridaVersion(@Nullable String versionText) {
+        if (ZaStrUtil.isBlank(versionText)) {
+            return ZaFridaSettingsService.DEFAULT_FRIDA_VERSION;
+        }
+        String normalized = versionText.trim();
+        if (normalized.isEmpty()) {
+            return ZaFridaSettingsService.DEFAULT_FRIDA_VERSION;
+        }
+        return normalized;
     }
 
     /**
