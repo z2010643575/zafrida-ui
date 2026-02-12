@@ -248,7 +248,9 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
         targetField.setToolTipText("Spawn/Attach uses package name");
 
         refreshDevicesBtn.setIcon(AllIcons.Actions.Refresh);
+        refreshDevicesBtn.setToolTipText("Refresh devices");
         addRemoteBtn.setIcon(AllIcons.General.Add);
+        addRemoteBtn.setToolTipText("Add remote host");
         locateRunScriptBtn.setIcon(AllIcons.General.Locate);
         locateRunScriptBtn.setToolTipText("Locate run script in Project View");
         chooseRunScriptBtn.setIcon(AllIcons.Actions.MenuOpen);
@@ -259,8 +261,11 @@ public final class ZaFridaRunPanel extends JPanel implements Disposable {
         attachBtn.setIcon(AllIcons.Actions.Execute);
         stopBtn.setIcon(AllIcons.Actions.Suspend);
         forceStopBtn.setIcon(AllIcons.Actions.Cancel);
+        forceStopBtn.setToolTipText("Force Stop App (adb force-stop)");
         openAppBtn.setIcon(AllIcons.Actions.Execute);
+        openAppBtn.setToolTipText("Open App (adb)");
         clearConsoleBtn.setIcon(AllIcons.Actions.ClearCash);
+        clearConsoleBtn.setToolTipText("Clear active console");
         initVersionInfo();
         updateRunningState();
     }

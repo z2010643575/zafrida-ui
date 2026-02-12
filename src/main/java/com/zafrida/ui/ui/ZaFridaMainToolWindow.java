@@ -104,18 +104,22 @@ public final class ZaFridaMainToolWindow extends JPanel implements Disposable {
         JPanel projectRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
         JButton newProjectBtn = new JButton("New Project");
         newProjectBtn.setIcon(AllIcons.Actions.NewFolder);
+        newProjectBtn.setToolTipText("New Frida Project");
         newProjectBtn.addActionListener(e -> runPanel.openNewProjectDialog());
 
         JButton projectSettingsBtn = new JButton("Project");
         projectSettingsBtn.setIcon(AllIcons.General.Settings);
+        projectSettingsBtn.setToolTipText("Open project settings");
         projectSettingsBtn.addActionListener(e -> runPanel.openProjectSettingsDialog());
 
         JButton globalSettingsBtn = new JButton("Global");
         globalSettingsBtn.setIcon(AllIcons.General.Settings);
+        globalSettingsBtn.setToolTipText("Open global settings");
         globalSettingsBtn.addActionListener(e -> runPanel.openGlobalSettingsDialog());
 
         JButton doctorBtn = new JButton("Doctor");
         doctorBtn.setIcon(AllIcons.General.InspectionsOK);
+        doctorBtn.setToolTipText("Environment doctor");
         doctorBtn.addActionListener(e -> runPanel.openEnvironmentDoctorDialog());
 
         /*JButton languageToggleBtn = new JButton(
@@ -141,14 +145,17 @@ public final class ZaFridaMainToolWindow extends JPanel implements Disposable {
 
         JButton forceStopBtn = new JButton("S App");
         forceStopBtn.setIcon(AllIcons.Actions.Cancel);
+        forceStopBtn.setToolTipText("Force Stop App (adb force-stop)");
         forceStopBtn.addActionListener(e -> runPanel.triggerForceStop());
 
         JButton openAppBtn = new JButton("O App");
         openAppBtn.setIcon(AllIcons.Actions.Execute);
+        openAppBtn.setToolTipText("Open App (adb)");
         openAppBtn.addActionListener(e -> runPanel.triggerOpenApp());
 
         JButton clearConsoleBtn = new JButton("Console");
         clearConsoleBtn.setIcon(AllIcons.Actions.ClearCash);
+        clearConsoleBtn.setToolTipText("Clear active console");
         clearConsoleBtn.addActionListener(e -> runPanel.triggerClearConsole());
 
         runPanel.bindExternalRunStopButtons(runBtn, stopBtn);
