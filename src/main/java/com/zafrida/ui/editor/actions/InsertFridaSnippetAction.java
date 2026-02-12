@@ -3,10 +3,13 @@ package com.zafrida.ui.editor.actions;
 import com.intellij.openapi.actionSystem.AnAction;
 import com.intellij.openapi.actionSystem.AnActionEvent;
 import com.intellij.openapi.actionSystem.CommonDataKeys;
+import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.command.WriteCommandAction;
 import com.intellij.openapi.editor.Document;
 import com.intellij.openapi.editor.Editor;
 import com.intellij.openapi.project.Project;
+import com.zafrida.ui.settings.ZaFridaSettingsService;
+import com.zafrida.ui.util.FridaJsCompatibilityUtil;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -49,9 +52,35 @@ public abstract class InsertFridaSnippetAction extends AnAction {
         }
 
         int offset = editor.getCaretModel().getOffset();
-        String insertion = applyLinePadding(document, offset, snippet);
+        String rawSnippet = getSnippet(e);
+        String convertedSnippet = adaptSnippetForConfiguredFridaVersion(rawSnippet);
+        String insertion = applyLinePadding(document, offset, convertedSnippet);
         WriteCommandAction.runWriteCommandAction(project, () -> document.insertString(offset, insertion));
         editor.getCaretModel().moveToOffset(offset + insertion.length());
+    }
+
+    /**
+     * 获取当前插入的代码片段。
+     * <p>
+     * 默认返回构造函数传入的固定片段；子类可按上下文动态覆盖。
+     *
+     * @param e Action 事件
+     * @return 片段内容
+     */
+    protected @NotNull String getSnippet(@NotNull AnActionEvent e) {
+        return snippet;
+    }
+
+    /**
+     * 按设置中的 Frida 版本对插入片段做兼容转换。
+     * @param rawSnippet 原始片段（默认按 Frida16 编写）
+     * @return 转换后的片段
+     */
+    private static @NotNull String adaptSnippetForConfiguredFridaVersion(@NotNull String rawSnippet) {
+        ZaFridaSettingsService settingsService =
+                ApplicationManager.getApplication().getService(ZaFridaSettingsService.class);
+        boolean frida17OrLater = settingsService != null && settingsService.isFrida17OrLater();
+        return FridaJsCompatibilityUtil.adaptForFridaVersion(rawSnippet, frida17OrLater);
     }
 
     /**
